@@ -32,7 +32,7 @@ __version__ = "0.1.3"
 __author__ = "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>"
 
 
-PREFIX = "/usr/local"
+PREFIX = "/opt/mambaforge"
 
 
 def install_from_url(
@@ -131,6 +131,8 @@ def install_from_url(
     if bin_path not in os.environ.get("PATH", "").split(":"):
         env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
     env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
+
+#make all changes here. 
 
     os.rename(sys.executable, f"{sys.executable}.real")
     with open(sys.executable, "w") as f:

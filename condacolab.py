@@ -32,7 +32,7 @@ __version__ = "0.1.3"
 __author__ = "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>"
 
 
-PREFIX = "/opt/mambaforge"
+PREFIX = "/opt/miniconda"
 
 
 def install_from_url(
@@ -137,6 +137,8 @@ def install_from_url(
     os.rename(sys.executable, f"{sys.executable}.real")
     with open(sys.executable, "w") as f:
         f.write("#!/bin/bash\n")
+        f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
+        f.write(f"conda activate\n")
         envstr = " ".join(f"{k}={v}" for k, v in env.items())
         f.write(f"exec env {envstr} {sys.executable}.real -x $@\n")
     run(["chmod", "+x", sys.executable])

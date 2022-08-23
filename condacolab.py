@@ -125,12 +125,14 @@ def install_from_url(
     if sitepackages not in sys.path:
         sys.path.insert(0, sitepackages)
 
-    print("🩹 Patching environment...")
-    env = env or {}
-    bin_path = f"{prefix}/bin"
-    if bin_path not in os.environ.get("PATH", "").split(":"):
-        env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
-    env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
+#
+
+    # print("🩹 Patching environment...")
+    # env = env or {}
+    # bin_path = f"{prefix}/bin"
+    # if bin_path not in os.environ.get("PATH", "").split(":"):
+    #     env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    # env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
 #make all changes here. 
 
@@ -139,8 +141,8 @@ def install_from_url(
         f.write("#!/bin/bash\n")
         f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
         f.write(f"conda activate\n")
-        envstr = " ".join(f"{k}={v}" for k, v in env.items())
-        f.write(f"exec env {envstr} {sys.executable}.real -x $@\n")
+        # envstr = " ".join(f"{k}={v}" for k, v in env.items()) 
+        f.write(f"exec python -x $@\n")
     run(["chmod", "+x", sys.executable])
 
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))

@@ -126,18 +126,19 @@ def install_from_url(
         sys.path.insert(0, sitepackages)
 
 
-    # print("🩹 Patching environment...")
-    # env = env or {}
-    # bin_path = f"{prefix}/bin"
-    # if bin_path not in os.environ.get("PATH", "").split(":"):
-    #     env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
-    # env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
+    print("🩹 Patching environment...")
+    env = env or {}
+    bin_path = f"{prefix}/bin"
+    if bin_path not in os.environ.get("PATH", "").split(":"):
+        env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
     os.rename(sys.executable, f"{sys.executable}.real")
     with open(sys.executable, "w") as f:
         f.write("#!/bin/bash\n")
         f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
         f.write(f"conda activate\n")
+        f.write(f"!conda install -yq ipykernel\n")
         f.write(f"exec $@\n")
     run(["chmod", "+x", sys.executable])
 

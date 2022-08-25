@@ -102,8 +102,6 @@ def install_from_url(
     condameta = prefix / "conda-meta"
     condameta.mkdir(parents=True, exist_ok=True)
     pymaj, pymin = sys.version_info[:2]
-    bin_path = f"{prefix}/bin" #/opt/miniconda/bin/
-    activator = f"{bin_path}/activator"  #opt/miniconda/bin/activator
 
     with open(condameta / "pinned", "a") as f:
         f.write(f"python {pymaj}.{pymin}.*\n")
@@ -141,21 +139,22 @@ def install_from_url(
     with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "r") as f:
         data = json.load(f)
 
-    data["argv"][0] = "{bin_path}/python"
-    # data["argv"].insert(1, "{activator}") #opt/miniconda/bin/python3
+    data["argv"][0] = f"{prefix}/bin/python"
+    # data["argv"].insert(1, "activator") #opt/miniconda/bin/python3
 
     with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "w+") as f:
         f.write(json.dumps(data))
 
 
-
-    with open(activator, "w") as f:
+    os.rename(sys.executable, "activator")
+    with open(sys.executable, "w") as f:
         f.write("#!/bin/bash\n")
         f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
         f.write(f"conda activate\n")
         f.write(f"!conda install -yq ipykernel\n")
         f.write(f"exec $@\n")
-    run(["chmod", "+x", activator])
+    run(["chmod", "+x", sys.executable])
+
 
 
 

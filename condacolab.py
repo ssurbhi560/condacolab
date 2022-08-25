@@ -9,7 +9,7 @@ Usage:
 
 For more details, check the docstrings for ``install_from_url()``.
 """
-
+import json
 import os
 import sys
 import shutil
@@ -102,6 +102,8 @@ def install_from_url(
     condameta = prefix / "conda-meta"
     condameta.mkdir(parents=True, exist_ok=True)
     pymaj, pymin = sys.version_info[:2]
+    bin_path = f"{prefix}/bin" #/opt/miniconda/bin/
+    activator = {bin_path}/ "activator"  #opt/miniconda/bin/activator
 
     with open(condameta / "pinned", "a") as f:
         f.write(f"python {pymaj}.{pymin}.*\n")
@@ -125,7 +127,6 @@ def install_from_url(
     if sitepackages not in sys.path:
         sys.path.insert(0, sitepackages)
 
-#
 
     # print("🩹 Patching environment...")
     # env = env or {}
@@ -134,16 +135,40 @@ def install_from_url(
     #     env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
     # env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
-#make all changes here. 
 
-    os.rename(sys.executable, f"{sys.executable}.real")
-    with open(sys.executable, "w") as f:
+# Overwriting kernel.json file.
+
+    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "r") as f:
+        data = json.load(f)
+
+    data["argv"][0] = "{bin_path}/python"
+    # data["argv"].insert(1, "{activator}") #opt/miniconda/bin/python3
+
+    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "w+") as f:
+        f.write(json.dumps(data))
+
+
+
+    with open(activator, "w") as f:
         f.write("#!/bin/bash\n")
         f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
         f.write(f"conda activate\n")
-        # envstr = " ".join(f"{k}={v}" for k, v in env.items()) 
-        f.write(f"exec python -x $@\n")
-    run(["chmod", "+x", sys.executable])
+        f.write(f"!conda install -yq ipykernel\n")
+        f.write(f"exec $@\n")
+    run(["chmod", "+x", activator])
+
+
+
+    #     # envstr = " ".join(f"{k}={v}" for k, v in env.items()) 
+    #     f.write(f"exec python $@\n")
+    # run(["chmod", "+x", sys.executable])
+
+    # with open(sys.executable, )
+    #     f.write("#!/bin/bash\n")
+    #     f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
+    #     f.write(f"conda activate\n")
+    #     f.write(f"conda install -yq ipykernel")
+    #     f.write(f"exec $@\n")
 
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")

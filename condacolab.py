@@ -103,7 +103,7 @@ def install_from_url(
     condameta.mkdir(parents=True, exist_ok=True)
     pymaj, pymin = sys.version_info[:2]
     bin_path = f"{prefix}/bin" #/opt/miniconda/bin/
-    activator = {bin_path}/ "activator"  #opt/miniconda/bin/activator
+    activator = f"{bin_path}/activator"  #opt/miniconda/bin/activator
 
     with open(condameta / "pinned", "a") as f:
         f.write(f"python {pymaj}.{pymin}.*\n")

@@ -136,16 +136,6 @@ def install_from_url(
 
 # Overwriting kernel.json file.
 
-    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "r") as f:
-        data = json.load(f)
-
-    data["argv"][0] = f"{prefix}/bin/python"
-    # data["argv"].insert(1, "activator") #opt/miniconda/bin/python3
-
-    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "w+") as f:
-        f.write(json.dumps(data))
-
-
     os.rename(sys.executable, "activator")
     with open(sys.executable, "w") as f:
         f.write("#!/bin/bash\n")
@@ -155,6 +145,15 @@ def install_from_url(
         f.write(f"exec $@\n")
     run(["chmod", "+x", sys.executable])
 
+
+    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "r") as f:
+        data = json.load(f)
+
+    data["argv"][0] = f"{prefix}/bin/python"
+    # data["argv"].insert(1, "activator") #opt/miniconda/bin/python3
+
+    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "w+") as f:
+        f.write(json.dumps(data))
 
 
 

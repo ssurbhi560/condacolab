@@ -126,54 +126,87 @@ def install_from_url(
         sys.path.insert(0, sitepackages)
 
 
-    print("🩹 Patching environment...")
-    env = env or {}
-    bin_path = f"{prefix}/bin"
-    if bin_path not in os.environ.get("PATH", "").split(":"):
-        env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
-    env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
+    # print("🩹 Patching environment...")
+    # env = env or {}
+    # bin_path = f"{prefix}/bin"
+    # if bin_path not in os.environ.get("PATH", "").split(":"):
+    #     env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    # env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
-
-# Overwriting kernel.json file.
-
-    os.rename(sys.executable, "activator")
+    os.rename(sys.executable, f"{sys.executable}.real")
     with open(sys.executable, "w") as f:
         f.write("#!/bin/bash\n")
         f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
         f.write(f"conda activate\n")
-        f.write(f"!conda install -yq ipykernel\n")
         f.write(f"exec $@\n")
     run(["chmod", "+x", sys.executable])
 
+    # with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "r") as f:
+    #     data = json.load(f)
 
-    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "r") as f:
-        data = json.load(f)
+    # data["argv"][0] = f"{prefix}/bin/activator"
+    # data["display_name"] = "Python 3 (condacolab)"
+    # # data["argv"].insert(1, "activator") #opt/miniconda/bin/python3
 
-    data["argv"][0] = f"{prefix}/bin/activator"
-    data["display_name"] = "Python 3 (condacolab)"
-    # data["argv"].insert(1, "activator") #opt/miniconda/bin/python3
-
-    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "w+") as f:
-        f.write(json.dumps(data))
-
+    # with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "w+") as f:
+    #     f.write(json.dumps(data))
 
 
-    #     # envstr = " ".join(f"{k}={v}" for k, v in env.items()) 
-    #     f.write(f"exec python $@\n")
-    # run(["chmod", "+x", sys.executable])
-
-    # with open(sys.executable, )
-    #     f.write("#!/bin/bash\n")
-    #     f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
-    #     f.write(f"conda activate\n")
-    #     f.write(f"conda install -yq ipykernel")
-    #     f.write(f"exec $@\n")
 
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")
 
     print("🔁 Restarting kernel...")
     get_ipython().kernel.do_shutdown(True)
+
+#     print("🩹 Patching environment...")
+#     env = env or {}
+#     bin_path = f"{prefix}/bin"
+#     if bin_path not in os.environ.get("PATH", "").split(":"):
+#         env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
+#     env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
+
+
+# # Overwriting kernel.json file.
+
+#     os.rename(sys.executable, "activator")
+#     with open(sys.executable, "w") as f:
+#         f.write("#!/bin/bash\n")
+#         f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
+#         f.write(f"conda activate\n")
+#         f.write(f"!conda install -yq ipykernel\n")
+#         f.write(f"exec $@\n")
+#     run(["chmod", "+x", sys.executable])
+
+
+    # with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "r") as f:
+    #     data = json.load(f)
+
+    # data["argv"][0] = f"{prefix}/bin/activator"
+    # data["display_name"] = "Python 3 (condacolab)"
+    # # data["argv"].insert(1, "activator") #opt/miniconda/bin/python3
+
+    # with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "w+") as f:
+    #     f.write(json.dumps(data))
+
+
+
+#     #     # envstr = " ".join(f"{k}={v}" for k, v in env.items()) 
+#     #     f.write(f"exec python $@\n")
+#     # run(["chmod", "+x", sys.executable])
+
+#     # with open(sys.executable, )
+#     #     f.write("#!/bin/bash\n")
+#     #     f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
+#     #     f.write(f"conda activate\n")
+#     #     f.write(f"conda install -yq ipykernel")
+#     #     f.write(f"exec $@\n")
+
+#     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
+#     print(f"⏲ Done in {taken}")
+
+#     print("🔁 Restarting kernel...")
+#     get_ipython().kernel.do_shutdown(True)
 
 
 def install_mambaforge(

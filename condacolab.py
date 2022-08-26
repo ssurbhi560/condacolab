@@ -138,7 +138,7 @@ def install_from_url(
         f.write("#!/bin/bash\n")
         f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
         f.write("conda activate\n")
-        f.write("!conda install -yq ipykernel\n")
+        f.write("conda install -yq ipykernel\n")
         f.write("exec $@\n")
 
     with open("/usr/local/share/jupyter/kernels/python3/kernel.json", 'r') as f:

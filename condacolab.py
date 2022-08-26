@@ -141,16 +141,15 @@ def install_from_url(
         f.write("conda install -yq ipykernel\n")
         f.write("exec $@\n")
 
-    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", 'r') as f:
+    with open("/usr/local/share/jupyter/kernels/python3/kernel.json", 'r+') as f:
         data = json.load(f)
+        f.seek(0) 
+        if data["argv"][0] != f"{bin_path}/activator":
 
-    if data["argv"][0] != f"{bin_path}/activator":
+            data["argv"][0] = f"{bin_path}/activator"
+            data["argv"].insert(1, f"{bin_path}/python")
+            data["display_name"] = "Python 3 (condacolab)"
 
-        data["argv"][0] = f"{bin_path}/activator"
-        data["argv"].insert(1, f"{bin_path}/python")
-        data["display_name"] = "Python 3 (condacolab)"
-
-        with open("/usr/local/share/jupyter/kernels/python3/kernel.json", "w") as f:
             f.write(json.dumps(data))
 
     # os.rename(sys.executable, f"{sys.executable}.real")

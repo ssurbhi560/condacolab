@@ -32,7 +32,7 @@ __version__ = "0.1.4"
 __author__ = "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>"
 
 
-PREFIX = "/usr/local"
+PREFIX = "/opt/miniconda"
 
 
 def install_from_url(
@@ -89,11 +89,35 @@ def install_from_url(
         stderr=STDOUT,
         text=True,
     )
+
+    # installing google.colab packages, matplortlib-base and psutil.
+
+    colab_task = run(
+        [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip"],
+        check=False,
+        stdout=PIPE,
+        stderr=STDOUT,
+        text=True,
+    )
+    psutil_task = run(
+        [f"{prefix}/bin/conda", "install", "-yq", "matplotlib-base", "psutil"],
+        check=False,
+        stdout=PIPE,
+        stderr=STDOUT,
+        text=True,
+    )
+
     os.unlink(installer_fn)
     with open("condacolab_install.log", "w") as f:
         f.write(task.stdout)
+    with open("colab_task.log", "w") as f:
+        f.write(colab_task.stdout)
+    with open("psutil_task.log", "w") as f:
+        f.write(psutil_task.stdout)
     assert (
-        task.returncode == 0
+        task.returncode == 0 and
+        colab_task.returncode  == 0 and
+        psutil_task.returncode == 0
     ), "💥💔💥 The installation failed! Logs are available at `/content/condacolab_install.log`."
 
     print("📌 Adjusting configuration...")
@@ -125,18 +149,20 @@ def install_from_url(
     if sitepackages not in sys.path:
         sys.path.insert(0, sitepackages)
 
-    print("🩹 Patching environment...")
+    # print("🩹 Patching environment...")
     env = env or {}
     bin_path = f"{prefix}/bin"
-    if bin_path not in os.environ.get("PATH", "").split(":"):
-        env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
-    env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
+    # if bin_path not in os.environ.get("PATH", "").split(":"):
+    #     env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    # env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
     os.rename(sys.executable, f"{sys.executable}.real")
     with open(sys.executable, "w") as f:
         f.write("#!/bin/bash\n")
-        envstr = " ".join(f"{k}={v}" for k, v in env.items())
-        f.write(f"exec env {envstr} {sys.executable}.real -x $@\n")
+        f.write(f"source {prefix}/etc/profile.d/conda.sh\n")
+        f.write("conda activate\n")
+        f.write(f"unset PYTHONPATH\n") # why we need to do this?
+        f.write(f"exec {bin_path}/python $@\n")
     run(["chmod", "+x", sys.executable])
 
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))

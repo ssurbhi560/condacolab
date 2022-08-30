@@ -92,20 +92,23 @@ def install_from_url(
 
     # installing google.colab packages, matplortlib-base and psutil.
 
-    colab_task = run(
-        [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip"],
-        check=False,
-        stdout=PIPE,
-        stderr=STDOUT,
-        text=True,
-    )
+    conda_exe = "mamba" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
     psutil_task = run(
-        [f"{prefix}/bin/conda", "install", "-yq", "matplotlib-base", "psutil"],
+        [f"{prefix}/bin/{conda_exe}", "install", "-yq", "matplotlib-base", "psutil", "google-colab"],
         check=False,
         stdout=PIPE,
         stderr=STDOUT,
         text=True,
     )
+
+    colab_task = run(
+        [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", "condacolab"],
+        check=False,
+        stdout=PIPE,
+        stderr=STDOUT,
+        text=True,
+    )
+
 
     os.unlink(installer_fn)
     with open("condacolab_install.log", "w") as f:

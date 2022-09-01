@@ -328,6 +328,9 @@ def check(prefix: os.PathLike = PREFIX, verbose: bool = True):
     assert (
         f"{prefix}/bin" in os.environ["PATH"]
     ), f"💥💔💥 PATH was not patched! Value: {os.environ['PATH']}"
+    assert (
+        f"{prefix}/lib" in os.environ["LD_LIBRARY_PATH"]
+    ), f"💥💔💥 LD_LIBRARY_PATH was not patched! Value: {os.environ['LD_LIBRARY_PATH']}"
     if verbose:
         print("✨🍰✨ Everything looks OK!")
 

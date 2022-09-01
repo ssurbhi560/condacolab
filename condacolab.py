@@ -152,11 +152,11 @@ def install_from_url(
     if sitepackages not in sys.path:
         sys.path.insert(0, sitepackages)
 
-    # print("🩹 Patching environment...")
+    print("🩹 Patching environment...")
     env = env or {}
     bin_path = f"{prefix}/bin"
-    # if bin_path not in os.environ.get("PATH", "").split(":"):
-    #     env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    if bin_path not in os.environ.get("PATH", "").split(":"):
+        env["PATH"] = f"{bin_path}:{os.environ.get('PATH', '')}"
     # env["LD_LIBRARY_PATH"] = f"{prefix}/lib:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
     os.rename(sys.executable, f"{sys.executable}.real")

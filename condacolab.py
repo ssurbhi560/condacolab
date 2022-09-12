@@ -126,7 +126,7 @@ def install_from_url(
     conda_exe = "mamba" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
 
     conda_task = run_subprocess(
-        [f"{prefix}/bin/{conda_exe}", "install", "-yq", "matplotlib-base", "psutil", "google-colab"], 
+        [f"{prefix}/bin/{conda_exe}", "install", "-yq", "matplotlib-ba", "psutil", "google-colab"], 
         "conda_task.log",
         )
 

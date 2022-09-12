@@ -20,6 +20,8 @@ from textwrap import dedent
 from typing import Dict, AnyStr
 from urllib.request import urlopen
 from distutils.spawn import find_executable
+import ipywidgets as widgets
+from IPython.display import display
 
 from IPython import get_ipython
 
@@ -61,6 +63,16 @@ def run_subprocess(bash_command, logs_filename):
     assert ( task.returncode == 0
     ), f"💥💔💥 The installation failed! Logs are available at `/content/{logs_filename}`."
 
+
+button = widgets.Button(description="Restart kernel now...")
+output = widgets.Output(layout={'border': '1px solid black'})
+
+def on_button_clicked(b):
+  # Display the message within the output widget.
+  with output:
+    get_ipython().kernel.do_shutdown(True)
+    print("Kernel restarted...")
+    button.close()
 
 def install_from_url(
     installer_url: AnyStr,
@@ -185,9 +197,10 @@ def install_from_url(
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")
 
-    print("🔁 Restarting kernel...")
-    get_ipython().kernel.do_shutdown(True)
-
+    print("🔁 Please restart the kernel...")
+    # get_ipython().kernel.do_shutdown(True)
+    button.on_click(on_button_clicked)
+    display(button, output)
 
 def install_mambaforge(
     prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True

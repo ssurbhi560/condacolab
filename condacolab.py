@@ -188,11 +188,13 @@ def install_from_url(
                 source {prefix}/etc/profile.d/conda.sh
                 conda activate
                 unset PYTHONPATH
+                rm -rf /usr/bin/lsb_release
                 exec {bin_path}/python $@
                 """
             ).lstrip()
         )
     run(["chmod", "+x", sys.executable])
+    # run(["sudo", "rm", "/usr/bin/lsb_release"]) # see this to know why we are doing this : https://github.com/pypa/pip/issues/4924
 
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")

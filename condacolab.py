@@ -353,6 +353,7 @@ def check(prefix: os.PathLike = PREFIX, verbose: bool = True):
 
     pymaj, pymin = sys.version_info[:2]
     sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
+    print(sitepackages)
     assert sitepackages in sys.path, f"💥💔💥 PYTHONPATH was not patched! Value: {sys.path}"
     assert (
         f"{prefix}/bin" in os.environ["PATH"]

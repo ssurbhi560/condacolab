@@ -144,7 +144,8 @@ def install_from_url(
 
     pip_task = run_subprocess(
         [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", 
-        "condacolab"], "pip_task.log",
+        "https://github.com/ssurbhi560/condacolab/archive/second-working-branch.tar.gz"], 
+        "pip_task.log",
         )
 
     print("📌 Adjusting configuration...")
@@ -358,6 +359,9 @@ def check(prefix: os.PathLike = PREFIX, verbose: bool = True):
     assert (
         f"{prefix}/bin" in os.environ["PATH"]
     ), f"💥💔💥 PATH was not patched! Value: {os.environ['PATH']}"
+    #condaprefix
+    #usr/local not in sys.path
+    #
     # assert (
     #     f"{prefix}/lib" in os.environ["LD_LIBRARY_PATH"]
     # ), f"💥💔💥 LD_LIBRARY_PATH was not patched! Value: {os.environ['LD_LIBRARY_PATH']}"

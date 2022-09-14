@@ -79,6 +79,7 @@ def install_from_url(
     prefix: os.PathLike = PREFIX,
     env: Dict[AnyStr, AnyStr] = None,
     run_checks: bool = True,
+    always_yes: bool = True,
 ):
     """
     Download and run a constructor-like installer, patching
@@ -190,7 +191,7 @@ def install_from_url(
                 source {prefix}/etc/profile.d/conda.sh
                 conda activate
                 unset PYTHONPATH
-                rm -rf /usr/bin/lsb_release
+                mv /usr/bin/lsb_release /usr/bin/lsb_release_back
                 exec {bin_path}/python $@
                 """
             ).lstrip()
@@ -201,13 +202,16 @@ def install_from_url(
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")
 
-    print("🔁 Please restart the kernel...")
-    # get_ipython().kernel.do_shutdown(True)
-    button.on_click(on_button_clicked)
-    display(button, output)
+    if always_yes:
+        print("🔁 Restarting kernel...")
+        get_ipython().kernel.do_shutdown(True)
+    else:
+        print("🔁 Please restart kernel...")
+        button.on_click(on_button_clicked)
+        display(button, output)
 
 def install_mambaforge(
-    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True
+    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True, always_yes: bool = True,
 ):
     """
     Install Mambaforge, built for Python 3.7.
@@ -238,7 +242,7 @@ def install_mambaforge(
         to run the installation.
     """
     installer_url = r"https://github.com/jaimergp/miniforge/releases/latest/download/Mambaforge-colab-Linux-x86_64.sh"
-    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks)
+    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, always_yes=always_yes)
 
 
 # Make mambaforge the default
@@ -362,10 +366,6 @@ def check(prefix: os.PathLike = PREFIX, verbose: bool = True):
     ), f"💥💔💥 PATH was not patched! Value: {os.environ['PATH']}"
     #condaprefix
     #usr/local not in sys.path
-    #
-    # assert (
-    #     f"{prefix}/lib" in os.environ["LD_LIBRARY_PATH"]
-    # ), f"💥💔💥 LD_LIBRARY_PATH was not patched! Value: {os.environ['LD_LIBRARY_PATH']}"
     if verbose:
         print("✨🍰✨ Everything looks OK!")
 

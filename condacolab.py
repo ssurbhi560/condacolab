@@ -191,7 +191,7 @@ def install_from_url(
                 source {prefix}/etc/profile.d/conda.sh
                 conda activate
                 unset PYTHONPATH
-                sudo mv /usr/bin/lsb_release /usr/bin/lsb_release_back
+                mv /usr/bin/lsb_release /usr/bin/lsb_release_back
                 exec {bin_path}/python $@
                 """
             ).lstrip()
@@ -359,13 +359,14 @@ def check(prefix: os.PathLike = PREFIX, verbose: bool = True):
 
     pymaj, pymin = sys.version_info[:2]
     sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
-    print(sitepackages)
     assert sitepackages in sys.path, f"💥💔💥 PYTHONPATH was not patched! Value: {sys.path}"
+    assert "/usr/local/" not in sys.path, "💥💔💥 There is some problem with installation!"
     assert (
         f"{prefix}/bin" in os.environ["PATH"]
     ), f"💥💔💥 PATH was not patched! Value: {os.environ['PATH']}"
-    #condaprefix
-    #usr/local not in sys.path
+    assert (
+        prefix == os.environ["CONDA_PREFIX"],
+        ), f"💥💔💥 CONDA_PREFIX Value: {os.environ['CONDA_PREFIX']} does not match conda installation location {prefix}!"
     if verbose:
         print("✨🍰✨ Everything looks OK!")
 

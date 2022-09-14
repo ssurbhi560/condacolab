@@ -134,6 +134,7 @@ def install_from_url(
         - google-colab
         - colabtools
     """
+    # condacolab.install(..., always_yes=True)
 
     conda_exe = "mamba" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
 

@@ -10,12 +10,13 @@ Usage:
 For more details, check the docstrings for ``install_from_url()``.
 """
 
+import json
 import os
 import sys
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from subprocess import run, PIPE, STDOUT
+from subprocess import check_output, run, PIPE, STDOUT
 from textwrap import dedent
 from typing import Dict, AnyStr
 from urllib.request import urlopen
@@ -128,20 +129,26 @@ def install_from_url(
         "condacolab_install.log",
         )
 
-    """ 
-    Installing the following packages because Colab server expects these packages to be installed in order to launch a Python kernel :
-        - matplotlib-base
-        - psutil
-        - google-colab
-        - colabtools
-    """
-    # condacolab.install(..., always_yes=True)
+    # Installing the following packages because Colab server expects these packages to be installed in order to launch a Python kernel :
+    #     - matplotlib-base
+    #     - psutil
+    #     - google-colab
+    #     - colabtools
 
     conda_exe = "mamba" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
 
-    conda_task = run_subprocess(
-        [f"{prefix}/bin/{conda_exe}", "install", "-yq", "matplotlib-base", "psutil", "google-colab", "ipywidgets"], 
-        "conda_task.log",
+    output = check_output([f"{prefix}/bin/conda", "list", "--json"])
+    payload = json.loads(output)
+    installed_names = [pkg["name"] for pkg in payload] 
+    required_packages = ["matplotlib-base", "psutil", "google-colab"]
+    for pkg in required_packages.copy():
+        if pkg in installed_names:
+            required_packages.remove(pkg)
+
+    if required_packages:
+        run_subprocess( 
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages],
+            "conda_task.log",
         )
 
     pip_task = run_subprocess(
@@ -195,9 +202,8 @@ def install_from_url(
                 exec {bin_path}/python $@
                 """
             ).lstrip()
-        )
+        ) # see this to know why we are doing `mv /usr/bin/lsb_release /usr/bin/lsb_release_back` : https://github.com/pypa/pip/issues/4924
     run(["chmod", "+x", sys.executable])
-    # run(["sudo", "rm", "/usr/bin/lsb_release"]) # see this to know why we are doing this : https://github.com/pypa/pip/issues/4924
 
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")

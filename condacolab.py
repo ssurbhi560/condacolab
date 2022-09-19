@@ -27,6 +27,12 @@ from IPython.display import display
 from IPython import get_ipython
 
 try:
+    import ipywidgets as widgets
+    HAS_IPYWIDGETS = True
+except ImportError:
+    HAS_IPYWIDGETS = False
+
+try:
     import google.colab
 except ImportError:
     raise RuntimeError("This module must ONLY run as part of a Colab notebook!")
@@ -35,6 +41,17 @@ except ImportError:
 __version__ = "0.1.4"
 __author__ = "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>"
 
+
+if HAS_IPYWIDGETS:
+    restart_button_output = widgets.Output(layout={'border': '1px solid black'})
+else:
+    restart_kernel_button = restart_button_output = None
+
+def on_button_clicked(b):
+  with restart_button_output:
+    get_ipython().kernel.do_shutdown(True)
+    print("Kernel restarted!")
+    restart_kernel_button.close()
 
 PREFIX = "/opt/miniconda"
 
@@ -64,16 +81,6 @@ def run_subprocess(bash_command, logs_filename):
     assert ( task.returncode == 0
     ), f"💥💔💥 The installation failed! Logs are available at `/content/{logs_filename}`."
 
-
-button = widgets.Button(description="Restart kernel now...")
-output = widgets.Output(layout={'border': '1px solid black'})
-
-def on_button_clicked(b):
-  # Display the message within the output widget.
-  with output:
-    get_ipython().kernel.do_shutdown(True)
-    print("Kernel restarted...")
-    button.close()
 
 def install_from_url(
     installer_url: AnyStr,
@@ -208,13 +215,18 @@ def install_from_url(
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")
 
+
     if always_yes:
         print("🔁 Restarting kernel...")
         get_ipython().kernel.do_shutdown(True)
-    else:
+
+    elif HAS_IPYWIDGETS:
         print("🔁 Please restart kernel...")
-        button.on_click(on_button_clicked)
-        display(button, output)
+        restart_kernel_button.on_click(on_button_clicked)
+        display(restart_kernel_button, restart_button_output)
+
+    else:
+        print("🔁 Please restart kernel by clicking on Runtime > Restart runtime.")
 
 def install_mambaforge(
     prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True, always_yes: bool = True,

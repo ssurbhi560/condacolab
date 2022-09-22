@@ -85,7 +85,7 @@ def install_from_url(
     
     #new ones:
     
-    # python_version: str = None, # conda install python{python_version} ??
+    python_version: str = None, # conda install python{python_version} ??
     specs: Iterable[str] = None,  # conda install *specs
     # channels: Iterable[str] = None, # conda install set these channels.
     # environment_file: str = None, # conda env update -f <path>
@@ -156,11 +156,30 @@ def install_from_url(
         if pkg in installed_names:
             required_packages.remove(pkg)
 
-    if required_packages or specs:
+    if required_packages:
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages, *specs],
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages],
             "conda_task.log",
         )
+
+    if python_version:
+        print(f"Changing python version to python{python_version}")
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", f"python={python_version}"],
+            "python_installation.log",
+        )
+
+    print("📦 Installing your specs...")
+
+    if specs:
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs],
+            "conda_specs.log",
+        )
+    
+    print("📦 Specs installation done.")
+
+
 
     pip_task = _run_subprocess(
         [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", "condacolab"],
@@ -175,8 +194,8 @@ def install_from_url(
     pymaj, pymin = sys.version_info[:2]
 
     with open(condameta / "pinned", "a") as f:
-        f.write(f"python {pymaj}.{pymin}.*\n")
-        f.write(f"python_abi {pymaj}.{pymin}.* *cp{pymaj}{pymin}*\n")
+        # f.write(f"python {pymaj}.{pymin}.*\n")
+        # f.write(f"python_abi {pymaj}.{pymin}.* *cp{pymaj}{pymin}*\n")
         f.write(f"cudatoolkit {cuda_version}.*\n")
 
     with open(prefix / ".condarc", "a") as f:
@@ -235,7 +254,8 @@ def install_mambaforge(
     env: Dict[AnyStr, AnyStr] = None, 
     run_checks: bool = True, 
     restart_kernel: bool = True,
-    specs: Iterable[str] = None
+    specs: Iterable[str] = None,
+    python_version: str = None,
 ):
     """
     Install Mambaforge, built for Python 3.7.
@@ -262,7 +282,7 @@ def install_mambaforge(
         to run the installation.
     """
     installer_url = r"https://github.com/jaimergp/miniforge/releases/latest/download/Mambaforge-colab-Linux-x86_64.sh"
-    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel, specs=specs)
+    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel, specs=specs, python_version=python_version)
 
 
 # Make mambaforge the default

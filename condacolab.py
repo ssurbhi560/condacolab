@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from subprocess import check_output, run, PIPE, STDOUT
 from textwrap import dedent
-from typing import Dict, AnyStr
+from typing import Dict, AnyStr, Iterable
 from urllib.request import urlopen
 from distutils.spawn import find_executable
 from IPython.display import display
@@ -82,6 +82,17 @@ def install_from_url(
     env: Dict[AnyStr, AnyStr] = None,
     run_checks: bool = True,
     restart_kernel: bool = True,
+    
+    #new ones:
+    
+    # python_version: str = None, # conda install python{python_version} ??
+    specs: Iterable[str] = None,  # conda install *specs
+    # channels: Iterable[str] = None, # conda install set these channels.
+    # environment_file: str = None, # conda env update -f <path>
+    # extra_conda_args: Iterable[str] = None, 
+    # # pip stuff
+    # pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
+
 ):
     """
     Download and run a constructor-like installer, patching
@@ -145,9 +156,9 @@ def install_from_url(
         if pkg in installed_names:
             required_packages.remove(pkg)
 
-    if required_packages:
+    if required_packages or specs:
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages],
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages, *specs],
             "conda_task.log",
         )
 
@@ -220,7 +231,11 @@ def install_from_url(
         print("🔁 Please restart kernel by clicking on Runtime > Restart runtime.")
 
 def install_mambaforge(
-    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True, restart_kernel: bool = True,
+    prefix: os.PathLike = PREFIX, 
+    env: Dict[AnyStr, AnyStr] = None, 
+    run_checks: bool = True, 
+    restart_kernel: bool = True,
+    specs: Iterable[str] = None
 ):
     """
     Install Mambaforge, built for Python 3.7.
@@ -247,7 +262,7 @@ def install_mambaforge(
         to run the installation.
     """
     installer_url = r"https://github.com/jaimergp/miniforge/releases/latest/download/Mambaforge-colab-Linux-x86_64.sh"
-    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel)
+    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel, specs=specs)
 
 
 # Make mambaforge the default

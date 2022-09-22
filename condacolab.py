@@ -1,12 +1,9 @@
 """
 condacolab
 Install Conda and friends on Google Colab, easily
-
 Usage:
-
 >>> import condacolab
 >>> condacolab.install()
-
 For more details, check the docstrings for ``install_from_url()``.
 """
 
@@ -21,7 +18,6 @@ from textwrap import dedent
 from typing import Dict, AnyStr
 from urllib.request import urlopen
 from distutils.spawn import find_executable
-import ipywidgets as widgets
 from IPython.display import display
 
 from IPython import get_ipython
@@ -42,45 +38,42 @@ __version__ = "0.1.4"
 __author__ = "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>"
 
 
+PREFIX = "/opt/miniconda"
+
 if HAS_IPYWIDGETS:
     restart_kernel_button = widgets.Button(description="Restart kernel now...")
     restart_button_output = widgets.Output(layout={'border': '1px solid black'})
 else:
     restart_kernel_button = restart_button_output = None
 
-def on_button_clicked(b):
+def _on_button_clicked(b):
   with restart_button_output:
     get_ipython().kernel.do_shutdown(True)
     print("Kernel restarted!")
     restart_kernel_button.close()
 
-PREFIX = "/opt/miniconda"
-
-def run_subprocess(bash_command, logs_filename):
+def _run_subprocess(command, logs_filename):
     """
     Run subprocess then write the logs for that process and raise errors if it fails.
-
-        Parameters
-        ----------
-        bash_command
-            Bash command to run while installing the packages.
-
-        logs_filename
-            Name of the file to be used for writing the logs after running the task.
-
+    Parameters
+    ----------
+    command
+        Command to run while installing the packages.
+    logs_filename
+        Name of the file to be used for writing the logs after running the task.
     """
+
     task = run(
-            bash_command,
+            command,
             check=False,
             stdout=PIPE,
             stderr=STDOUT,
             text=True,
         )
 
-    with open(logs_filename, "w") as f:
+    with open(f"/content/{logs_filename}", "w") as f:
         f.write(task.stdout)
-    assert ( task.returncode == 0
-    ), f"💥💔💥 The installation failed! Logs are available at `/content/{logs_filename}`."
+    assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `/content/{logs_filename}`."
 
 
 def install_from_url(
@@ -88,14 +81,12 @@ def install_from_url(
     prefix: os.PathLike = PREFIX,
     env: Dict[AnyStr, AnyStr] = None,
     run_checks: bool = True,
-    always_yes: bool = True,
+    restart_kernel: bool = True,
 ):
     """
     Download and run a constructor-like installer, patching
     the necessary bits so it works on Colab right away.
-
     This will restart your kernel as a result!
-
     Parameters
     ----------
     installer_url
@@ -111,7 +102,6 @@ def install_from_url(
         to add those yourself in the raw string. They will
         end up added to a line like ``exec env VAR=VALUE python3...``.
         For example, a value with spaces should be passed as::
-
             env={"VAR": '"a value with spaces"'}
     run_checks
         Run checks to see if installation was run previously.
@@ -132,18 +122,20 @@ def install_from_url(
 
     print("📦 Installing...")
 
-    condacolab_task = run_subprocess(
-        ["bash", installer_fn, "-bfp", str(prefix)], 
+    condacolab_task = _run_subprocess(
+        ["bash", installer_fn, "-bfp", str(prefix)],
         "condacolab_install.log",
         )
 
-    # Installing the following packages because Colab server expects these packages to be installed in order to launch a Python kernel :
-    #     - matplotlib-base
-    #     - psutil
-    #     - google-colab
-    #     - colabtools
+# Installing the following packages because Colab server expects these packages to be installed in order to launch a Python kernel:
+#     - matplotlib-base
+#     - psutil
+#     - google-colab
+#     - colabtools
 
     conda_exe = "mamba" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
+
+    # check if any of those packages are already installed. If it is installed, remove it from the list of required packages.
 
     output = check_output([f"{prefix}/bin/conda", "list", "--json"])
     payload = json.loads(output)
@@ -154,15 +146,14 @@ def install_from_url(
             required_packages.remove(pkg)
 
     if required_packages:
-        run_subprocess( 
+        _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages],
             "conda_task.log",
         )
 
-    pip_task = run_subprocess(
-        [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", 
-        "https://github.com/ssurbhi560/condacolab/archive/second-working-branch.tar.gz"], 
-        "pip_task.log",
+    pip_task = _run_subprocess(
+        [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", "condacolab"],
+        "pip_task.log"
         )
 
     print("📌 Adjusting configuration...")
@@ -206,41 +197,37 @@ def install_from_url(
                 source {prefix}/etc/profile.d/conda.sh
                 conda activate
                 unset PYTHONPATH
-                mv /usr/bin/lsb_release /usr/bin/lsb_release_back
+                mv /usr/bin/lsb_release /usr/bin/lsb_release.renamed_by_condacolab.bak
                 exec {bin_path}/python $@
                 """
             ).lstrip()
-        ) # see this to know why we are doing `mv /usr/bin/lsb_release /usr/bin/lsb_release_back` : https://github.com/pypa/pip/issues/4924
+        )
     run(["chmod", "+x", sys.executable])
 
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")
 
-
-    if always_yes:
+    if restart_kernel:
         print("🔁 Restarting kernel...")
         get_ipython().kernel.do_shutdown(True)
 
     elif HAS_IPYWIDGETS:
         print("🔁 Please restart kernel...")
-        restart_kernel_button.on_click(on_button_clicked)
+        restart_kernel_button.on_click(_on_button_clicked)
         display(restart_kernel_button, restart_button_output)
 
     else:
         print("🔁 Please restart kernel by clicking on Runtime > Restart runtime.")
 
 def install_mambaforge(
-    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True, always_yes: bool = True,
+    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True, restart_kernel: bool = True,
 ):
     """
     Install Mambaforge, built for Python 3.7.
-
     Mambaforge consists of a Miniconda-like distribution optimized
     and preconfigured for conda-forge packages, and includes ``mamba``,
     a faster ``conda`` implementation.
-
     Unlike the official Miniconda, this is built with the latest ``conda``.
-
     Parameters
     ----------
     prefix
@@ -253,7 +240,6 @@ def install_mambaforge(
         to add those yourself in the raw string. They will
         end up added to a line like ``exec env VAR=VALUE python3...``.
         For example, a value with spaces should be passed as::
-
             env={"VAR": '"a value with spaces"'}
     run_checks
         Run checks to see if installation was run previously.
@@ -261,7 +247,7 @@ def install_mambaforge(
         to run the installation.
     """
     installer_url = r"https://github.com/jaimergp/miniforge/releases/latest/download/Mambaforge-colab-Linux-x86_64.sh"
-    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, always_yes=always_yes)
+    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel)
 
 
 # Make mambaforge the default
@@ -269,16 +255,13 @@ install = install_mambaforge
 
 
 def install_miniforge(
-    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True
+    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True, restart_kernel: bool = True,
 ):
     """
     Install Mambaforge, built for Python 3.7.
-
     Mambaforge consists of a Miniconda-like distribution optimized
     and preconfigured for conda-forge packages.
-
     Unlike the official Miniconda, this is built with the latest ``conda``.
-
     Parameters
     ----------
     prefix
@@ -291,7 +274,6 @@ def install_miniforge(
         to add those yourself in the raw string. They will
         end up added to a line like ``exec env VAR=VALUE python3...``.
         For example, a value with spaces should be passed as::
-
             env={"VAR": '"a value with spaces"'}
     run_checks
         Run checks to see if installation was run previously.
@@ -299,15 +281,14 @@ def install_miniforge(
         to run the installation.
     """
     installer_url = r"https://github.com/jaimergp/miniforge/releases/latest/download/Miniforge-colab-Linux-x86_64.sh"
-    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks)
+    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel)
 
 
 def install_miniconda(
-    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True
+    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True, restart_kernel: bool = True,
 ):
     """
     Install Miniconda 4.12.0 for Python 3.7.
-
     Parameters
     ----------
     prefix
@@ -320,7 +301,6 @@ def install_miniconda(
         to add those yourself in the raw string. They will
         end up added to a line like ``exec env VAR=VALUE python3...``.
         For example, a value with spaces should be passed as::
-
             env={"VAR": '"a value with spaces"'}
     run_checks
         Run checks to see if installation was run previously.
@@ -328,16 +308,15 @@ def install_miniconda(
         to run the installation.
     """
     installer_url = r"https://repo.anaconda.com/miniconda/Miniconda3-py37_4.12.0-Linux-x86_64.sh"
-    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks)
+    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel)
 
 
 def install_anaconda(
-    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True
+    prefix: os.PathLike = PREFIX, env: Dict[AnyStr, AnyStr] = None, run_checks: bool = True, restart_kernel: bool = True,
 ):
     """
     Install Anaconda 2022.05, the latest version built
     for Python 3.7 at the time of update.
-
     Parameters
     ----------
     prefix
@@ -350,7 +329,6 @@ def install_anaconda(
         to add those yourself in the raw string. They will
         end up added to a line like ``exec env VAR=VALUE python3...``.
         For example, a value with spaces should be passed as::
-
             env={"VAR": '"a value with spaces"'}
     run_checks
         Run checks to see if installation was run previously.
@@ -358,14 +336,13 @@ def install_anaconda(
         to run the installation.
     """
     installer_url = r"https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh"
-    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks)
+    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel)
 
 
 def check(prefix: os.PathLike = PREFIX, verbose: bool = True):
     """
     Run some basic checks to ensure that ``conda`` has been installed
     correctly
-
     Parameters
     ----------
     prefix
@@ -379,13 +356,16 @@ def check(prefix: os.PathLike = PREFIX, verbose: bool = True):
     pymaj, pymin = sys.version_info[:2]
     sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
     assert sitepackages in sys.path, f"💥💔💥 PYTHONPATH was not patched! Value: {sys.path}"
-    assert "/usr/local/" not in sys.path, "💥💔💥 There is some problem with installation!"
+    assert all(
+        not path.startswith("/usr/local/") for path in sys.path
+    ), f"💥💔💥 PYTHONPATH include system locations: {[path for path in sys.path if path.startswith('/usr/local')]}!"
     assert (
         f"{prefix}/bin" in os.environ["PATH"]
     ), f"💥💔💥 PATH was not patched! Value: {os.environ['PATH']}"
     assert (
-        prefix == os.environ["CONDA_PREFIX"],
-        ), f"💥💔💥 CONDA_PREFIX Value: {os.environ['CONDA_PREFIX']} does not match conda installation location {prefix}!"
+        prefix == os.environ.get("CONDA_PREFIX")
+    ), f"💥💔💥 CONDA_PREFIX value: {os.environ.get('CONDA_PREFIX', '<not set>')} does not match conda installation location {prefix}!"
+
     if verbose:
         print("✨🍰✨ Everything looks OK!")
 

@@ -78,20 +78,20 @@ def _run_subprocess(command, logs_filename):
 
 def install_from_url(
     installer_url: AnyStr,
-    prefix: os.PathLike = PREFIX,
+    prefix:os.PathLike = PREFIX,
     env: Dict[AnyStr, AnyStr] = None,
     run_checks: bool = True,
     restart_kernel: bool = True,
     
     #new ones:
     
-    python_version: str = None, # conda install python{python_version} ??
+    python_version: str = None, # conda install python{python_version}
     specs: Iterable[str] = None,  # conda install *specs
-    # channels: Iterable[str] = None, # conda install set these channels.
-    # environment_file: str = None, # conda env update -f <path>
-    # extra_conda_args: Iterable[str] = None, 
-    # # pip stuff
-    # pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
+    channels: Iterable[str] = None, # conda install set these channels. 
+    environment_file: str = None, # conda env update -f <path>
+    extra_conda_args: Iterable[str] = None, 
+    # pip stuff
+    pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
 
 ):
     """
@@ -169,17 +169,36 @@ def install_from_url(
             "python_installation.log",
         )
 
-    print("📦 Installing your specs...")
-
     if specs:
+        print("📦 Installing your specs... ")
         _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs],
             "conda_specs.log",
         )
-    
-    print("📦 Specs installation done.")
+        print("📦 Specs installation done.")
 
+    if environment_file:
+        print("📦 Updating packages from environment_file")
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-f","-yq", environment_file],
+            "environment_file.log",
+        )
 
+    # Comma separated list of channels to use in order of priority. ["conda-forge", "new_channel"]
+    if channels:
+        print("📦 Setting channels...")
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "config", "--add", "channels", *channels],
+            "channels_setting.log"
+        )
+        print("channels are set.")
+
+    if pip_args:
+        print("Installing packages using pip")
+        _run_subprocess(
+            [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", *pip_args],
+            "extra_pip_stuff.log"
+        )
 
     pip_task = _run_subprocess(
         [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", "condacolab"],
@@ -256,6 +275,12 @@ def install_mambaforge(
     restart_kernel: bool = True,
     specs: Iterable[str] = None,
     python_version: str = None,
+    channels: Iterable[str] = None, # conda install set these channels.
+    environment_file: str = None, # conda env update -f <path>
+    extra_conda_args: Iterable[str] = None, 
+    # pip stuff
+    pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
+
 ):
     """
     Install Mambaforge, built for Python 3.7.
@@ -282,7 +307,19 @@ def install_mambaforge(
         to run the installation.
     """
     installer_url = r"https://github.com/jaimergp/miniforge/releases/latest/download/Mambaforge-colab-Linux-x86_64.sh"
-    install_from_url(installer_url, prefix=prefix, env=env, run_checks=run_checks, restart_kernel=restart_kernel, specs=specs, python_version=python_version)
+    install_from_url(
+        installer_url, 
+        prefix=prefix, 
+        env=env, 
+        run_checks=run_checks, 
+        restart_kernel=restart_kernel, 
+        specs=specs, 
+        python_version=python_version,
+        channels=channels,
+        environment_file=environment_file,
+        extra_conda_args=extra_conda_args,
+        pip_args=pip_args,
+        )
 
 
 # Make mambaforge the default

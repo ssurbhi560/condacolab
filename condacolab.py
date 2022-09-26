@@ -225,6 +225,21 @@ def install_from_url(
         )
     run(["chmod", "+x", sys.executable])
 
+    taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
+    print(f"⏲ Done in {taken}")
+
+    if restart_kernel:
+        print("🔁 Restarting kernel...")
+        get_ipython().kernel.do_shutdown(True)
+
+    elif HAS_IPYWIDGETS:
+        print("🔁 Please restart kernel...")
+        restart_kernel_button.on_click(_on_button_clicked)
+        display(restart_kernel_button, restart_button_output)
+
+    else:
+        print("🔁 Please restart kernel by clicking on Runtime > Restart runtime.")
+
     if specs:
         print("📦 Installing your specs... ")
         _run_subprocess(
@@ -251,7 +266,7 @@ def install_from_url(
     if environment_file:
         print("📦 Updating packages from environment.yaml file")
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "--file", environment_file],
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base","--file", environment_file],
             "environment_file.log"
         )
 
@@ -268,21 +283,6 @@ def install_from_url(
             [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", *pip_args],
             "extra_pip_stuff.log"
         )
-
-    taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
-    print(f"⏲ Done in {taken}")
-
-    if restart_kernel:
-        print("🔁 Restarting kernel...")
-        get_ipython().kernel.do_shutdown(True)
-
-    elif HAS_IPYWIDGETS:
-        print("🔁 Please restart kernel...")
-        restart_kernel_button.on_click(_on_button_clicked)
-        display(restart_kernel_button, restart_button_output)
-
-    else:
-        print("🔁 Please restart kernel by clicking on Runtime > Restart runtime.")
 
 def install_mambaforge(
     prefix: os.PathLike = PREFIX, 

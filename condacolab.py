@@ -38,7 +38,7 @@ __version__ = "0.1.4"
 __author__ = "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>"
 
 
-PREFIX = "/opt/miniconda"
+PREFIX = "/opt/conda"
 
 if HAS_IPYWIDGETS:
     restart_kernel_button = widgets.Button(description="Restart kernel now...")
@@ -144,7 +144,7 @@ def install_from_url(
 #     - google-colab
 #     - colabtools
 
-    conda_exe = "mamba" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
+    conda_exe = "conda" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
 
     # check if any of those packages are already installed. If it is installed, remove it from the list of required packages.
 
@@ -162,7 +162,7 @@ def install_from_url(
             "conda_task.log",
         )
 
-    # Comma separated list of channels to use in order of priority. ["conda-forge", "new_channel"]
+    # Comma separated list of channels to use in order of priority. ["conda-forge", "bioconda"]
     if channels:
         print("📦 Setting channels...")
         for channel in channels:

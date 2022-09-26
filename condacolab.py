@@ -182,7 +182,7 @@ def install_from_url(
     if specs:
         print("📦 Installing your specs... ")
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs, *extra_conda_args],
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs],
             "conda_specs.log",
         )
         print("📦 Specs installation done.")

@@ -162,6 +162,15 @@ def install_from_url(
             "conda_task.log",
         )
 
+    # Comma separated list of channels to use in order of priority. ["conda-forge", "new_channel"]
+    if channels:
+        print("📦 Setting channels...")
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "config", "--add", "channels", *channels],
+            "channels_setting.log"
+        )
+        print("channels are set.")
+
     if python_version:
         print(f"Changing python version to python{python_version}")
         _run_subprocess(
@@ -172,26 +181,33 @@ def install_from_url(
     if specs:
         print("📦 Installing your specs... ")
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs],
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs, *extra_conda_args],
             "conda_specs.log",
         )
         print("📦 Specs installation done.")
 
+    # if python version is specified with both `python_version` and in `environment_file` we give preference 
+    # to the one mentioned in the `environment_file`.
+
     if environment_file:
         print("📦 Updating packages from environment_file")
-        _run_subprocess(
+        run(
             [f"{prefix}/bin/{conda_exe}", "env", "update", "--file", environment_file],
-            "environment_file.log",
-        )
+            check=False,
+            stdout=PIPE,
+            stderr=STDOUT,
+            text=True,
+            )
 
-    # Comma separated list of channels to use in order of priority. ["conda-forge", "new_channel"]
-    if channels:
-        print("📦 Setting channels...")
-        _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "config", "--add", "channels", *channels],
-            "channels_setting.log"
-        )
-        print("channels are set.")
+    # if environment_file and python_version:
+    #     pass
+    #     # in environment file change the python version to the one given with python_version.
+    #     # run environment_file's command. 
+
+    # if environment_file and specs:
+    #     #write all the packages given in specs in environment yaml file.
+    #     #and then again use environment_file's command.
+    #     pass
 
     if pip_args:
         print("Installing packages using pip")

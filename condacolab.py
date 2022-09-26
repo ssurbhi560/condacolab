@@ -137,6 +137,16 @@ def install_from_url(
         ["bash", installer_fn, "-bfp", str(prefix)],
         "condacolab_install.log",
         )
+    
+    # Comma separated list of channels to use in order of priority. ["conda-forge", "bioconda"]
+    if channels:
+        print("📦 Setting channels...")
+        for channel in channels:
+            _run_subprocess(
+                [f"{prefix}/bin/conda", "config", "--add", "channels", channel],
+                "channels_setting.log"
+            )
+        print("channels are set.")
 
 # Installing the following packages because Colab server expects these packages to be installed in order to launch a Python kernel:
 #     - matplotlib-base
@@ -160,58 +170,6 @@ def install_from_url(
         _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages],
             "conda_task.log",
-        )
-
-    # Comma separated list of channels to use in order of priority. ["conda-forge", "bioconda"]
-    if channels:
-        print("📦 Setting channels...")
-        for channel in channels:
-            _run_subprocess(
-                [f"{prefix}/bin/conda", "config", "--add", "channels", channel],
-                "channels_setting.log"
-            )
-        print("channels are set.")
-
-    if python_version:
-        print(f"Changing default Python to Python{python_version}")
-        _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "install", "-yq", f"python={python_version}"],
-            "python_installation.log",
-        )
-
-    if specs:
-        print("📦 Installing your specs... ")
-        _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs],
-            "conda_specs.log",
-        )
-        print("📦 Specs installation done.")
-
-    # if python version is specified with both `python_version` and in `environment_file` we give preference 
-    # to the one mentioned in the `environment_file`.
-
-    if environment_file:
-        print("📦 Updating packages from environment.yaml file")
-        _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "--file", environment_file],
-            "environment_file.log"
-            )
-
-    # if environment_file and python_version:
-    #     pass
-    #     # in environment file change the python version to the one given with python_version.
-    #     # run environment_file's command. 
-
-    # if environment_file and specs:
-    #     #write all the packages given in specs in environment yaml file.
-    #     #and then again use environment_file's command.
-    #     pass
-
-    if pip_args:
-        print("Installing packages using pip")
-        _run_subprocess(
-            [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", *pip_args],
-            "extra_pip_stuff.log"
         )
 
     pip_task = _run_subprocess(
@@ -266,6 +224,50 @@ def install_from_url(
             ).lstrip()
         )
     run(["chmod", "+x", sys.executable])
+
+    if specs:
+        print("📦 Installing your specs... ")
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs],
+            "conda_specs.log",
+        )
+        print("📦 Specs installation done.")
+
+
+    # if environment_file and python_version:
+    #     pass
+    #     # in environment file change the python version to the one given with python_version.
+    #     # run environment_file's command. 
+
+    # if environment_file and specs:
+    #     #write all the packages given in specs in environment yaml file.
+    #     #and then again use environment_file's command.
+    #     pass
+
+
+    # if python version is specified with both `python_version` and in `environment_file` we give preference 
+    # to the one mentioned in the `environment_file`.
+
+    if environment_file:
+        print("📦 Updating packages from environment.yaml file")
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "--file", environment_file],
+            "environment_file.log"
+        )
+
+    if python_version:
+        print(f"Changing default Python to Python{python_version}")
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "install", "-yq", f"python={python_version}"],
+            "python_installation.log",
+        )
+
+    if pip_args:
+        print("Installing packages using pip")
+        _run_subprocess(
+            [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", *pip_args],
+            "extra_pip_stuff.log"
+        )
 
     taken = timedelta(seconds=round((datetime.now() - t0).total_seconds(), 0))
     print(f"⏲ Done in {taken}")

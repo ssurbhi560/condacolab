@@ -165,14 +165,15 @@ def install_from_url(
     # Comma separated list of channels to use in order of priority. ["conda-forge", "new_channel"]
     if channels:
         print("📦 Setting channels...")
-        _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "config", "--add", "channels", *channels],
-            "channels_setting.log"
-        )
+        for channel in channels:
+            _run_subprocess(
+                [f"{prefix}/bin/{conda_exe}", "config", "--add", "channels", channel],
+                "channels_setting.log"
+            )
         print("channels are set.")
 
     if python_version:
-        print(f"Changing python version to python{python_version}")
+        print(f"Changing default Python to Python{python_version}")
         _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "install", "-yq", f"python={python_version}"],
             "python_installation.log",

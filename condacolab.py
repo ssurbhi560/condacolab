@@ -144,7 +144,7 @@ def install_from_url(
 #     - google-colab
 #     - colabtools
 
-    conda_exe = "conda" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
+    conda_exe = "mamba" if os.path.isfile(f"{prefix}/bin/mamba") else "conda"
 
     # check if any of those packages are already installed. If it is installed, remove it from the list of required packages.
 
@@ -167,7 +167,7 @@ def install_from_url(
         print("📦 Setting channels...")
         for channel in channels:
             _run_subprocess(
-                [f"{prefix}/bin/{conda_exe}", "config", "--add", "channels", channel],
+                [f"{prefix}/bin/conda", "config", "--add", "channels", channel],
                 "channels_setting.log"
             )
         print("channels are set.")
@@ -191,13 +191,10 @@ def install_from_url(
     # to the one mentioned in the `environment_file`.
 
     if environment_file:
-        print("📦 Updating packages from environment_file")
-        run(
+        print("📦 Updating packages from environment.yaml file")
+        _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "env", "update", "--file", environment_file],
-            check=False,
-            stdout=PIPE,
-            stderr=STDOUT,
-            text=True,
+            "environment_file.log"
             )
 
     # if environment_file and python_version:

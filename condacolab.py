@@ -192,6 +192,13 @@ def install_from_url(
 
     if environment_file:
         print("📦 Updating packages from environment.yaml file")
+        run(
+            ["cp", "-R", "environment.yaml", "/content/"],
+            check=False,
+            stdout=PIPE,
+            stderr=STDOUT,
+            text=True,
+        )
         _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "env", "update", "--file", environment_file],
             "environment_file.log"

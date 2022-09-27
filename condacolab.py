@@ -227,7 +227,7 @@ def install_from_url(
     prefix = Path(prefix)
     condameta = prefix / "conda-meta"
     condameta.mkdir(parents=True, exist_ok=True)
-    pymaj, pymin = sys.version_info[:2]
+    # pymaj, pymin = sys.version_info[:2]
 
     with open(condameta / "pinned", "a") as f:
         # f.write(f"python {pymaj}.{pymin}.*\n")
@@ -237,19 +237,19 @@ def install_from_url(
     with open(prefix / ".condarc", "a") as f:
         f.write("always_yes: true\n")
 
-    with open("/etc/ipython/ipython_config.py", "a") as f:
-        f.write(
-            f"""\nc.InteractiveShellApp.exec_lines = [
-                    "import sys",
-                    "sp = f'{prefix}/lib/python{pymaj}.{pymin}/site-packages'",
-                    "if sp not in sys.path:",
-                    "    sys.path.insert(0, sp)",
-                ]
-            """
-        )
-    sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
-    if sitepackages not in sys.path:
-        sys.path.insert(0, sitepackages)
+    # with open("/etc/ipython/ipython_config.py", "a") as f:
+    #     f.write(
+    #         f"""\nc.InteractiveShellApp.exec_lines = [
+    #                 "import sys",
+    #                 "sp = f'{prefix}/lib/python{pymaj}.{pymin}/site-packages'",
+    #                 "if sp not in sys.path:",
+    #                 "    sys.path.insert(0, sp)",
+    #             ]
+    #         """
+    #     )
+    # sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
+    # if sitepackages not in sys.path:
+    #     sys.path.insert(0, sitepackages)
 
     env = env or {}
     bin_path = f"{prefix}/bin"

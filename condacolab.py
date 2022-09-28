@@ -82,15 +82,11 @@ def install_from_url(
     env: Dict[AnyStr, AnyStr] = None,
     run_checks: bool = True,
     restart_kernel: bool = True,
-    
-    #new ones:
-    
     python_version: str = None, # conda install python{python_version}
     specs: Iterable[str] = None,  # conda install *specs
     channels: Iterable[str] = None, # conda install set these channels. 
     environment_file: str = None, # conda env update -f <path>
     extra_conda_args: Iterable[str] = None, 
-    # pip stuff
     pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
 
 ):
@@ -158,70 +154,42 @@ def install_from_url(
             required_packages.remove(pkg)
 
     if required_packages:
+        print("📦 Installing required packages and specs... ")
         _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages],
             "conda_task.log",
         )
+        print("📦 Required packages and specs installation done.")
 
     pip_task = _run_subprocess(
         [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", "https://github.com/ssurbhi560/condacolab/archive/second-working-branch.tar.gz"],
         "pip_task.log"
         )
 
-    # Comma separated list of channels to use in order of priority. ["conda-forge", "bioconda"]
-    if channels:
-        print("📦 Setting channels...")
-        for channel in channels:
-            _run_subprocess(
-                [f"{prefix}/bin/conda", "config", "--add", "channels", channel],
-                "channels_setting.log"
-            )
-        print("channels are set.")
-
-    if specs:
-        print("📦 Installing your specs... ")
-        _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "install", "-yq", *specs],
-            "conda_specs.log",
-        )
-        print("📦 Specs installation done.")
-
-
-    # if environment_file and python_version:
-    #     pass
-    #     # in environment file change the python version to the one given with python_version.
-    #     # run environment_file's command. 
-
-    # if environment_file and specs:
-    #     #write all the packages given in specs in environment yaml file.
-    #     #and then again use environment_file's command.
-    #     pass
-
-
-    # if python version is specified with both `python_version` and in `environment_file` we give preference 
-    # to the one mentioned in the `environment_file`.
-
+    #if environment.yaml file is provided - use that to update the conda base environment.
     if environment_file:
-        print("📦 Updating packages from environment.yaml file")
+        print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base","--file", environment_file],
-            "environment_file.log"
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "--name", "base", "--file", environment_file],
+            "environment_file_update.log",
         )
+        print("Environment update done.")
+    
+    # if any of specs, python_version, channels, pip_args, or extra_conda_args are given,
+    # and evniornment.yaml file is also given then, create new enviornment.yaml file with all these specifications in it.
+    # Use that enviornment.yaml file to update conda base env.
+    elif environment_file and (specs or channels or python_version or pip_args or extra_conda_args):
+        with open(environment_file, 'w') as f:
+            pass
 
-    if python_version:
-        print(f"Changing default Python to Python{python_version}")
-        _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "install", "-yq", f"python={python_version}"],
-            "python_installation.log",
-        )
+    # if any of specs, python_version, channels, pip_args, or extra_conda_args are given,
+    # and evniornment.yaml file is not given then, create new enviornment.yaml file with all these specifications in it.
+    # Use that enviornment.yaml file to update conda base env.
 
-    if pip_args:
-        print("Installing packages using pip")
-        _run_subprocess(
-            [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", *pip_args],
-            "extra_pip_stuff.log"
-        )
-
+    else:
+        with open("content/environment.yaml", 'a') as f:
+            pass
+        
     print("📌 Adjusting configuration...")
     cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])
     prefix = Path(prefix)

@@ -154,12 +154,12 @@ def install_from_url(
             required_packages.remove(pkg)
 
     if required_packages:
-        print("📦 Installing required packages and specs... ")
+        print("📦 Installing required packages.")
         _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "install", "-yq", *required_packages],
             "conda_task.log",
         )
-        print("📦 Required packages and specs installation done.")
+        print("📦 Installation done.")
 
     pip_task = _run_subprocess(
         [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", "https://github.com/ssurbhi560/condacolab/archive/second-working-branch.tar.gz"],
@@ -170,7 +170,7 @@ def install_from_url(
     if environment_file:
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "--name", "base", "--file", environment_file],
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file],
             "environment_file_update.log",
         )
         print("Environment update done.")

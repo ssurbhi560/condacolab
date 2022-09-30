@@ -195,8 +195,8 @@ def install_from_url(
     # Use that enviornment.yaml file to update conda base env.
 
     elif (specs and python_version) or channels or pip_args:
-            dependencies = specs.append(f"python={python_version}")
-            env_details = {"channels" : channels, "depedencies": dependencies, "pip": pip_args,}
+            env_details = {"channels" : channels, "depedencies": specs, "pip": pip_args,}
+            env_details["dependencies"] += [f"python={python_version}"]
             environment_file_path = "/content/environment.yaml"
             with open(environment_file_path, 'w') as f:
                 yaml.dump(env_details, f, Dumper=MyDumper, sort_keys=False, default_flow_style=False)

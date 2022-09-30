@@ -16,6 +16,7 @@ from pathlib import Path
 from subprocess import check_output, run, PIPE, STDOUT
 from textwrap import dedent
 from typing import Dict, AnyStr, Iterable
+import yaml
 from urllib.request import urlopen
 from distutils.spawn import find_executable
 from IPython.display import display
@@ -39,6 +40,13 @@ __author__ = "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>"
 
 
 PREFIX = "/opt/conda"
+
+
+# helper class for adding indentation while creating enviornment.yaml files.
+class MyDumper(yaml.Dumper):
+
+    def increase_indent(self, flow=False, indentless=False):
+        return super(MyDumper, self).increase_indent(flow, False)
 
 if HAS_IPYWIDGETS:
     restart_kernel_button = widgets.Button(description="Restart kernel now...")
@@ -170,7 +178,7 @@ def install_from_url(
     if environment_file:
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file],
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file, *extra_conda_args],
             "environment_file_update.log",
         )
         print("Environment update done.")
@@ -187,8 +195,15 @@ def install_from_url(
     # Use that enviornment.yaml file to update conda base env.
 
     else:
-        with open("content/environment.yaml", 'a') as f:
-            pass
+        dependencies = specs.append(f"python={python_version}")
+        env_details = {"name": "base", "channels" : channels, "depedencies": dependencies, "pip": pip_args,}
+        environment_file_path = "/content/environment.yaml"
+        with open(environment_file_path, 'w') as f:
+            yaml.dump(env_details, f, Dumper=MyDumper, sort_keys=False, default_flow_style=False)
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file_path, *extra_conda_args],
+            "environment_file_update.log",
+        )
         
     print("📌 Adjusting configuration...")
     cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])
@@ -264,7 +279,6 @@ def install_mambaforge(
     channels: Iterable[str] = None, # conda install set these channels.
     environment_file: str = None, # conda env update -f <path>
     extra_conda_args: Iterable[str] = None, 
-    # pip stuff
     pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
 
 ):

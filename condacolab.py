@@ -174,13 +174,13 @@ def install_from_url(
         "pip_task.log"
         )
 
-    # testing something.
-    print("running testing task right now")
-    another_task = _run_subprocess(
-        [f"{prefix}/bin/{conda_exe}", "install", "anaconda-client", "-n", "base"],
-        "another_task.log",
-    )
-    print("testing task is done!")
+    # # testing something.
+    # print("running testing task right now")
+    # another_task = _run_subprocess(
+    #     [f"{prefix}/bin/{conda_exe}", "install", "anaconda-client", "-n", "base"],
+    #     "another_task.log",
+    # )
+    # print("testing task is done!")
 
     #if environment.yaml file is provided - use that to update the conda base environment.
     if environment_file:

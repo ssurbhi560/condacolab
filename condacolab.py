@@ -194,18 +194,31 @@ def install_from_url(
     # and evniornment.yaml file is not given then, create new enviornment.yaml file with all these specifications in it.
     # Use that enviornment.yaml file to update conda base env.
 
-    elif (specs and python_version) or channels or pip_args:
-            env_details = {"channels" : channels, "dependencies": specs, "pip": pip_args,}
+    else:
+        
+        env_details = {}
+
+        if channels: 
+            env_details["channels"] = channels
+
+        if specs:
+            env_details["dependencies"] = specs
+
+        if python_version:
             env_details["dependencies"] += [f"python={python_version}"]
-            environment_file_path = "/content/environment.yaml"
-            with open(environment_file_path, 'w') as f:
-                yaml.dump(env_details, f, Dumper=MyDumper, sort_keys=False, default_flow_style=False)
-            _run_subprocess(
-                [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file_path],
-                "environment_file_update.log",
-            )
-    else : 
-        pass
+
+        if pip_args:
+            pip_args_dict = {"pip": pip_args}
+            env_details["dependencies"].append(pip_args_dict) 
+
+        environment_file_path = "/content/environment.yaml"
+        with open(environment_file_path, 'w') as f:
+            yaml.dump(env_details, f, Dumper=MyDumper, sort_keys=False, default_flow_style=False)
+        _run_subprocess(
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file_path],
+            "environment_file_update.log",
+        )
+
         
     print("📌 Adjusting configuration...")
     cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])

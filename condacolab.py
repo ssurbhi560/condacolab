@@ -178,7 +178,7 @@ def install_from_url(
     if environment_file:
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file, *extra_conda_args],
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file],
             "environment_file_update.log",
         )
         print("Environment update done.")
@@ -201,7 +201,7 @@ def install_from_url(
         with open(environment_file_path, 'w') as f:
             yaml.dump(env_details, f, Dumper=MyDumper, sort_keys=False, default_flow_style=False)
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file_path, *extra_conda_args],
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file_path],
             "environment_file_update.log",
         )
         

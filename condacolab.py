@@ -180,7 +180,7 @@ def install_from_url(
         [f"{prefix}/bin/{conda_exe}", "install", "anaconda-client", "-n", "base"],
         "another_task.log",
     )
-    pritn("testing task is done!")
+    print("testing task is done!")
 
     #if environment.yaml file is provided - use that to update the conda base environment.
     if environment_file:

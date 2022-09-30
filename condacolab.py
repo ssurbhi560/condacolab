@@ -196,7 +196,7 @@ def install_from_url(
 
     else:
         dependencies = specs.append(f"python={python_version}")
-        env_details = {"name": "base", "channels" : channels, "depedencies": dependencies, "pip": pip_args,}
+        env_details = {"channels" : channels, "depedencies": dependencies, "pip": pip_args,}
         environment_file_path = "/content/environment.yaml"
         with open(environment_file_path, 'w') as f:
             yaml.dump(env_details, f, Dumper=MyDumper, sort_keys=False, default_flow_style=False)

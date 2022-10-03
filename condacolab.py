@@ -289,6 +289,7 @@ def install_from_url(
                 source {prefix}/etc/profile.d/conda.sh
                 conda activate
                 unset PYTHONPATH
+                
                 mv /usr/bin/lsb_release /usr/bin/lsb_release.renamed_by_condacolab.bak
                 exec {bin_path}/python $@
                 """

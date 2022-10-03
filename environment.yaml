@@ -1,7 +1,10 @@
 channels:
-  - conda-forge
-  - defaults
+  - bioconda
 dependencies:
-  - python=3.8
-  - numpy
-  - flask
+  - flask-change
+  - matplotlib-change
+  - numpy-change
+  - python=3.9
+  - pip:
+      - flask-sqlalchemy-change
+      - graphql-change

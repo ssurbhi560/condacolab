@@ -16,6 +16,7 @@ from pathlib import Path
 from subprocess import check_output, run, PIPE, STDOUT
 from textwrap import dedent
 from typing import Dict, AnyStr, Iterable
+from urllib.error import HTTPError
 import yaml
 from urllib.request import urlopen
 from distutils.spawn import find_executable
@@ -70,7 +71,7 @@ def _run_subprocess(command, logs_filename):
     logs_filename
         Name of the file to be used for writing the logs after running the task.
     """
-
+    print(command)
     task = run(
             command,
             check=False,
@@ -93,7 +94,7 @@ def install_from_url(
     python_version: str = None, # conda install python{python_version}
     specs: Iterable[str] = None,  # conda install *specs
     channels: Iterable[str] = None, # conda install set these channels. 
-    environment_file: str = None, # conda env update -f <path>
+    environment_file_url: str = None, # conda env update -f <path>
     extra_conda_args: Iterable[str] = None, 
     pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
 
@@ -183,21 +184,36 @@ def install_from_url(
     # print("testing task is done!")
 
     #if environment.yaml file is provided - use that to update the conda base environment.
-    if environment_file:
+    if environment_file_url:
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file],
+            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file_url],
             "environment_file_update.log",
         )
+
         print("Environment update done.")
     
     # if any of specs, python_version, channels, pip_args, or extra_conda_args are given,
     # and evniornment.yaml file is also given then, create new enviornment.yaml file with all these specifications in it.
     # Use that enviornment.yaml file to update conda base env.
-    elif environment_file and (specs or channels or python_version or pip_args or extra_conda_args):
-        with open(environment_file, 'w') as f:
-            pass
+    elif environment_file_url and (specs or channels or python_version or pip_args or extra_conda_args):
 
+        # Load the data from the file using the URL and create a file locally.
+        # Change the yaml file to a python dictionary.
+        # In that dictionary - add the packages specified by the user during installation something like this: 
+            # if python_version: 
+                #env_details["dependencies"] += [f"python={python_version}"]
+                # and so on.
+        # save the file.
+        print("Saving the environment.yaml file locally.")
+        try:
+            with urlopen(environment_file_url) as response, open("/content/environment.yaml", "wb") as out:
+                shutil.copyfileobj(response, out)
+        except HTTPError:
+            raise HTTPError("The URL you entered is not working, please check it again.")
+        print("Saved locally!")
+
+        print("Updating the environment.yaml file with new requirements you provided.")
     # if any of specs, python_version, channels, pip_args, or extra_conda_args are given,
     # and evniornment.yaml file is not given then, create new enviornment.yaml file with all these specifications in it.
     # Use that enviornment.yaml file to update conda base env.
@@ -218,6 +234,8 @@ def install_from_url(
         if pip_args:
             pip_args_dict = {"pip": pip_args}
             env_details["dependencies"].append(pip_args_dict) 
+
+        # env_details["prefix"] = {prefix}
 
         environment_file_path = "/content/environment.yaml"
         with open(environment_file_path, 'w') as f:
@@ -302,7 +320,7 @@ def install_mambaforge(
     specs: Iterable[str] = None,
     python_version: str = None,
     channels: Iterable[str] = None, # conda install set these channels.
-    environment_file: str = None, # conda env update -f <path>
+    environment_file_url: str = None, # conda env update -f <path>
     extra_conda_args: Iterable[str] = None, 
     pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
 
@@ -341,7 +359,7 @@ def install_mambaforge(
         specs=specs, 
         python_version=python_version,
         channels=channels,
-        environment_file=environment_file,
+        environment_file_url=environment_file_url,
         extra_conda_args=extra_conda_args,
         pip_args=pip_args,
         )

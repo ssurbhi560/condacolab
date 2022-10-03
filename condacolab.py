@@ -175,14 +175,6 @@ def install_from_url(
         "pip_task.log"
         )
 
-    # # testing something.
-    # print("running testing task right now")
-    # another_task = _run_subprocess(
-    #     [f"{prefix}/bin/{conda_exe}", "install", "anaconda-client", "-n", "base"],
-    #     "another_task.log",
-    # )
-    # print("testing task is done!")
-
     #if environment.yaml file is provided - use that to update the conda base environment.
     if environment_file_url:
         print("📦 Updating environment using environment.yaml file...")
@@ -251,29 +243,29 @@ def install_from_url(
     prefix = Path(prefix)
     condameta = prefix / "conda-meta"
     condameta.mkdir(parents=True, exist_ok=True)
-    # pymaj, pymin = sys.version_info[:2]
+    pymaj, pymin = sys.version_info[:2]
 
     with open(condameta / "pinned", "a") as f:
-        # f.write(f"python {pymaj}.{pymin}.*\n")
-        # f.write(f"python_abi {pymaj}.{pymin}.* *cp{pymaj}{pymin}*\n")
+        f.write(f"python {pymaj}.{pymin}.*\n")
+        f.write(f"python_abi {pymaj}.{pymin}.* *cp{pymaj}{pymin}*\n")
         f.write(f"cudatoolkit {cuda_version}.*\n")
 
     with open(prefix / ".condarc", "a") as f:
         f.write("always_yes: true\n")
 
-    # with open("/etc/ipython/ipython_config.py", "a") as f:
-    #     f.write(
-    #         f"""\nc.InteractiveShellApp.exec_lines = [
-    #                 "import sys",
-    #                 "sp = f'{prefix}/lib/python{pymaj}.{pymin}/site-packages'",
-    #                 "if sp not in sys.path:",
-    #                 "    sys.path.insert(0, sp)",
-    #             ]
-    #         """
-    #     )
-    # sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
-    # if sitepackages not in sys.path:
-    #     sys.path.insert(0, sitepackages)
+    with open("/etc/ipython/ipython_config.py", "a") as f:
+        f.write(
+            f"""\nc.InteractiveShellApp.exec_lines = [
+                    "import sys",
+                    "sp = f'{prefix}/lib/python{pymaj}.{pymin}/site-packages'",
+                    "if sp not in sys.path:",
+                    "    sys.path.insert(0, sp)",
+                ]
+            """
+        )
+    sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
+    if sitepackages not in sys.path:
+        sys.path.insert(0, sitepackages)
 
     env = env or {}
     bin_path = f"{prefix}/bin"

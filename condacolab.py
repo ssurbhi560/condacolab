@@ -11,6 +11,7 @@ import json
 import os
 import sys
 import shutil
+import requests
 from datetime import datetime, timedelta
 from pathlib import Path
 from subprocess import check_output, run, PIPE, STDOUT
@@ -186,17 +187,19 @@ def install_from_url(
         )
         print("Environment update done.")
 
-    # if environment.yaml file is given and some of other option are given as well.
+    # if environment.yaml file is given and some of other option are given as well, 
+    # we are assuming in this case this will always be a URL.
 
     elif environment_file and (specs or channels or python_version or pip_args):
-
-        print("Saving the environment.yaml file locally.")
         try:
-            with urlopen(environment_file) as response, open("/content/environment.yaml", "wb") as out:
-                shutil.copyfileobj(response, out)
+            r = requests.get(environment_file)
+
         except HTTPError:
             raise HTTPError("The URL you entered is not working, please check it again.")
-        print("Saved locally!")
+
+        with open("content/environment.yaml", 'wb') as f:
+                f.write(r.content) 
+
 
         with open('/content/environment.yaml', 'r') as f:
             try:
@@ -225,6 +228,9 @@ def install_from_url(
                             specs_list.append(specs_list.pop(specs_list.index(pip_args_list))) 
                             pip_args_list["pip"] += pip_args
                             break
+                        else:
+                            pip_args_dict = {'pip': [*pip_args]}
+                            specs_list.append
 
         with open('/content/enviornment.yaml', 'w') as f:
             f.truncate(0)

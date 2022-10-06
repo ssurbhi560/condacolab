@@ -191,11 +191,12 @@ def install_from_url(
     elif environment_file and (specs or channels or python_version or pip_args):
 
         print("Saving the environment.yaml file locally.")
+        # if its a URL
         try:
             with urlopen(environment_file) as response, open("/content/environment.yaml", "wb") as out:
                 shutil.copyfileobj(response, out)
-        except HTTPError:
-            raise HTTPError("The URL you entered is not working, please check it again.")
+        except:
+            pass
         print("Saved locally!")
 
         with open('/content/environment.yaml', 'r') as f:

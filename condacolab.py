@@ -96,7 +96,7 @@ def install_from_url(
     python_version: str = None,
     specs: Iterable[str] = None,
     channels: Iterable[str] = None,
-    environment_file_url: str = None,
+    environment_file: str = None,
     extra_conda_args: Iterable[str] = None, 
     pip_args: Iterable[str] = None,
 
@@ -178,51 +178,53 @@ def install_from_url(
 
     #if only environment.yaml file is provided and nothing else is given.
 
-    if environment_file_url and not(specs or channels or pip_args or python_version): 
+    if environment_file and not(specs or channels or pip_args or python_version): 
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
-            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file],
             "environment_file_update.log",
         )
         print("Environment update done.")
 
     # if environment.yaml file is given and some of other option are given as well.
 
-    elif environment_file_url and (specs or channels or python_version or pip_args):
+    elif environment_file and (specs or channels or python_version or pip_args):
 
         print("Saving the environment.yaml file locally.")
         try:
-            with urlopen(environment_file_url) as response, open("/content/environment.yaml", "wb") as out:
+            with urlopen(environment_file) as response, open("/content/environment.yaml", "wb") as out:
                 shutil.copyfileobj(response, out)
         except HTTPError:
             raise HTTPError("The URL you entered is not working, please check it again.")
         print("Saved locally!")
-        with open('/content/environment.yaml', 'r') as f:
 
+        with open('/content/environment.yaml', 'r') as f:
             try:
                 data = yaml.load(f, Loader=SafeLoader) 
             except yaml.YAMLError as e:
                 print(e)
 
-        print("Updating the environment.yaml file with new requirements you provided.")
+        print("Updating the environment.yaml file with new requirements given.")
 
         for key in data.keys():
-            if key == "channels":
+            if channels and key == "channels" :
                 data["channels"] += channels
 
             if key == "dependencies":
                 specs_list = data["dependencies"]
-                specs_list += specs
-                specs_list += [f"python={python_version}"]
+                if specs: 
+                    specs_list += specs
+                if python_version:
+                    specs_list += [f"python={python_version}"]
+                if pip_args:
+                    for pip_args_list in specs_list:
+                        if type(pip_args_list) == dict and "pip" in pip_args_list.keys():
 
-                for pip_args_list in specs_list:
-                    if type(pip_args_list) == dict and "pip" in pip_args_list.keys():
+                            # move the dictionary with pip requirements at the end of the list. 
 
-                        # move the dictionary with pip requirements at the end of the list. 
-
-                        specs_list.append(specs_list.pop(specs_list.index(pip_args_list))) 
-                        pip_args_list["pip"] += pip_args
-                        break
+                            specs_list.append(specs_list.pop(specs_list.index(pip_args_list))) 
+                            pip_args_list["pip"] += pip_args
+                            break
 
         with open('/content/enviornment.yaml', 'w') as f:
             f.truncate(0)
@@ -231,13 +233,12 @@ def install_from_url(
         print("Patched the enviornment.yaml file.")
 
         # move this into a separate function??? 
-
+        environment_file_path = "/content/environment.yaml"
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
-            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path],
             "environment_file_update.log",
         )
-
         print("Environment update done.")
 
     # if envioronment.yaml is not given but some/all other options are given.
@@ -325,7 +326,7 @@ def install_mambaforge(
     specs: Iterable[str] = None,
     python_version: str = None,
     channels: Iterable[str] = None,
-    environment_file_url: str = None,
+    environment_file: str = None,
     extra_conda_args: Iterable[str] = None, 
     pip_args: Iterable[str] = None,
 
@@ -364,7 +365,7 @@ def install_mambaforge(
         specs=specs, 
         python_version=python_version,
         channels=channels,
-        environment_file_url=environment_file_url,
+        environment_file=environment_file,
         extra_conda_args=extra_conda_args,
         pip_args=pip_args,
         )

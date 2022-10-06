@@ -18,6 +18,8 @@ from textwrap import dedent
 from typing import Dict, AnyStr, Iterable
 from urllib.error import HTTPError
 import yaml
+from yaml.loader import SafeLoader
+
 from urllib.request import urlopen
 from distutils.spawn import find_executable
 from IPython.display import display
@@ -44,10 +46,10 @@ PREFIX = "/opt/conda"
 
 
 # helper class for adding indentation while creating enviornment.yaml files.
-class MyDumper(yaml.Dumper):
+class YamlDumper(yaml.Dumper):
 
     def increase_indent(self, flow=False, indentless=False):
-        return super(MyDumper, self).increase_indent(flow, False)
+        return super(YamlDumper, self).increase_indent(flow, False)
 
 if HAS_IPYWIDGETS:
     restart_kernel_button = widgets.Button(description="Restart kernel now...")
@@ -175,8 +177,9 @@ def install_from_url(
         "pip_task.log"
         )
 
-    #if environment.yaml file is provided - use that to update the conda base environment.
-    if environment_file_url:
+    #if only environment.yaml file is provided and nothing else is given.
+
+    if environment_file_url and not(specs or channels or pip_args or python_version): 
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
             [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
@@ -185,10 +188,9 @@ def install_from_url(
 
         print("Environment update done.")
     
-    # if any of specs, python_version, channels, pip_args, or extra_conda_args are given,
-    # and evniornment.yaml file is also given then, create new enviornment.yaml file with all these specifications in it.
-    # Use that enviornment.yaml file to update conda base env.
-    elif environment_file_url and (specs or channels or python_version or pip_args or extra_conda_args):
+    # if environment.yaml file is given and some of other option are given as well.
+
+    elif environment_file_url and (specs or channels or python_version or pip_args):
 
         # Load the data from the file using the URL and create a file locally.
         # Change the yaml file to a python dictionary.
@@ -197,6 +199,8 @@ def install_from_url(
                 #env_details["dependencies"] += [f"python={python_version}"]
                 # and so on.
         # save the file.
+        # use that file to update conda base env.
+
         print("Saving the environment.yaml file locally.")
         try:
             with urlopen(environment_file_url) as response, open("/content/environment.yaml", "wb") as out:
@@ -204,12 +208,51 @@ def install_from_url(
         except HTTPError:
             raise HTTPError("The URL you entered is not working, please check it again.")
         print("Saved locally!")
+        with open('/content/environment.yaml', 'r') as f:
+
+            try:
+                # Converts yaml document to python object
+                data = yaml.load(f, Loader=SafeLoader) # python dictionary  
+            except yaml.YAMLError as e:
+                print(e)
 
         print("Updating the environment.yaml file with new requirements you provided.")
-    # if any of specs, python_version, channels, pip_args, or extra_conda_args are given,
-    # and evniornment.yaml file is not given then, create new enviornment.yaml file with all these specifications in it.
-    # Use that enviornment.yaml file to update conda base env.
 
+        for key in data.keys():
+            if key == "channels":
+                data["channels"] += channels
+
+            if key == "dependencies":
+                specs_list = data["dependencies"]
+                specs_list += specs
+                specs_list += [f"python={python_version}"]
+
+                for pip_args_list in specs_list:
+                    if type(pip_args_list) == dict and "pip" in pip_args_list.keys():
+
+                        # move the dictionary with pip requirements at the end of the list. 
+
+                        specs_list.append(specs_list.pop(specs_list.index(pip_args_list))) 
+                        pip_args_list["pip"] += pip_args
+                        break
+
+        with open('/content/enviornment.yaml', 'w') as f:
+            f.truncate(0)
+            yaml.dump(data, f, Dumper=YamlDumper, sort_keys=False, default_flow_style=False)
+
+        print("Patched the enviornment.yaml file.")
+
+        # make this into a separate function??? 
+
+        print("📦 Updating environment using environment.yaml file...")
+        _run_subprocess(
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
+            "environment_file_update.log",
+        )
+
+        print("Environment update done.")
+    
+    # if envioronment.yaml is not given but some or all other options are given.
     else:
         
         env_details = {}
@@ -231,13 +274,13 @@ def install_from_url(
 
         environment_file_path = "/content/environment.yaml"
         with open(environment_file_path, 'w') as f:
-            yaml.dump(env_details, f, Dumper=MyDumper, sort_keys=False, default_flow_style=False)
+            yaml.dump(env_details, f, Dumper=YamlDumper, sort_keys=False, default_flow_style=False)
+
         _run_subprocess(
             [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file_path],
             "environment_file_update.log",
         )
 
-        
     print("📌 Adjusting configuration...")
     cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])
     prefix = Path(prefix)

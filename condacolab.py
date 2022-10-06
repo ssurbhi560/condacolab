@@ -11,15 +11,14 @@ import json
 import os
 import sys
 import shutil
+import yaml
+from yaml.loader import SafeLoader
 from datetime import datetime, timedelta
 from pathlib import Path
 from subprocess import check_output, run, PIPE, STDOUT
 from textwrap import dedent
 from typing import Dict, AnyStr, Iterable
 from urllib.error import HTTPError
-import yaml
-from yaml.loader import SafeLoader
-
 from urllib.request import urlopen
 from distutils.spawn import find_executable
 from IPython.display import display
@@ -37,16 +36,17 @@ try:
 except ImportError:
     raise RuntimeError("This module must ONLY run as part of a Colab notebook!")
 
-
 __version__ = "0.1.4"
-__author__ = "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>"
+__author__ = (
+    "Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>, "
+    "Surbhi Sharma <ssurbhi560@users.noreply.github.com>"
+)
 
 
 PREFIX = "/opt/conda"
 
 
-# helper class for adding indentation while creating enviornment.yaml files got this solution from
-# https://stackoverflow.com/a/39681672/12253398
+# helper class for adding indentation while creating enviornment.yaml files.
 class YamlDumper(yaml.Dumper):
 
     def increase_indent(self, flow=False, indentless=False):
@@ -74,7 +74,6 @@ def _run_subprocess(command, logs_filename):
     logs_filename
         Name of the file to be used for writing the logs after running the task.
     """
-    print(command)
     task = run(
             command,
             check=False,
@@ -94,12 +93,12 @@ def install_from_url(
     env: Dict[AnyStr, AnyStr] = None,
     run_checks: bool = True,
     restart_kernel: bool = True,
-    python_version: str = None, # conda install python{python_version}
-    specs: Iterable[str] = None,  # conda install *specs
-    channels: Iterable[str] = None, # conda install set these channels. 
-    environment_file_url: str = None, # conda env update -f <path>
+    python_version: str = None,
+    specs: Iterable[str] = None,
+    channels: Iterable[str] = None,
+    environment_file_url: str = None,
     extra_conda_args: Iterable[str] = None, 
-    pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
+    pip_args: Iterable[str] = None,
 
 ):
     """
@@ -145,7 +144,6 @@ def install_from_url(
         ["bash", installer_fn, "-bfp", str(prefix)],
         "condacolab_install.log",
         )
-    
 
 # Installing the following packages because Colab server expects these packages to be installed in order to launch a Python kernel:
 #     - matplotlib-base
@@ -182,10 +180,17 @@ def install_from_url(
 
     if environment_file_url and not(specs or channels or pip_args or python_version): 
         print("📦 Updating environment using environment.yaml file...")
-        _run_subprocess(
-            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
-            "environment_file_update.log",
-        )
+        if extra_conda_args:
+            _run_subprocess(
+                [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url, *extra_conda_args],
+                "environment_file_update.log",
+            )
+        else: 
+            _run_subprocess(
+                [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
+                "environment_file_update.log",
+            )
+            
 
         print("Environment update done.")
     
@@ -201,15 +206,17 @@ def install_from_url(
                 # and so on.
         # save the file.
         # use that file to update conda base env.
-
+        environment_file_path = '/content/environment.yaml'
         print("Saving the environment.yaml file locally.")
         try:
-            with urlopen(environment_file_url) as response, open("/content/environment.yaml", "wb") as out:
+            # we are assuming that it will always be a URL in this case.
+            with urlopen(environment_file_url) as response, open(environment_file_path, "wb") as out:
                 shutil.copyfileobj(response, out)
         except HTTPError:
             raise HTTPError("The URL you entered is not working, please check it again.")
         print("Saved locally!")
-        with open('/content/environment.yaml', 'r') as f:
+
+        with open(environment_file_path, 'r') as f:
 
             try:
                 # Converts yaml document to python object
@@ -220,24 +227,29 @@ def install_from_url(
         print("Updating the environment.yaml file with new requirements you provided.")
 
         for key in data.keys():
-            if key == "channels":
+            if channels and key == "channels":
                 data["channels"] += channels
 
             if key == "dependencies":
-                specs_list = data["dependencies"]
-                specs_list += specs
-                specs_list += [f"python={python_version}"]
-
-                for pip_args_list in specs_list:
-                    if type(pip_args_list) == dict and "pip" in pip_args_list.keys():
+                if specs:
+                    data["dependencies"] += specs
+                if python_version:
+                    data["dependencies"] += [f"python={python_version}"]
+                if pip_args:
+                    for element in data["dependencies"]:
+                        if type(element) == dict and "pip" in element.keys():
 
                         # move the dictionary with pip requirements at the end of the list. 
 
-                        specs_list.append(specs_list.pop(specs_list.index(pip_args_list))) 
-                        pip_args_list["pip"] += pip_args
-                        break
+                            data["dependencies"].append(data["dependencies"].pop(data["dependencies"].index(element))) 
+                            element["pip"] += pip_args
+                            break
+                        else :
+                            pip_args_dict = {'pip': [*pip_args]}
+                            data["dependencies"].append(pip_args_dict)
+                            break
 
-        with open('/content/enviornment.yaml', 'w') as f:
+        with open(environment_file_path, 'w') as f:
             f.truncate(0)
             yaml.dump(data, f, Dumper=YamlDumper, sort_keys=False, default_flow_style=False)
 
@@ -247,7 +259,7 @@ def install_from_url(
 
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(
-            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path],
             "environment_file_update.log",
         )
 
@@ -271,14 +283,12 @@ def install_from_url(
             pip_args_dict = {"pip": pip_args}
             env_details["dependencies"].append(pip_args_dict) 
 
-        # env_details["prefix"] = {prefix}
-
         environment_file_path = "/content/environment.yaml"
         with open(environment_file_path, 'w') as f:
             yaml.dump(env_details, f, Dumper=YamlDumper, sort_keys=False, default_flow_style=False)
 
         _run_subprocess(
-            [f"{prefix}/bin/{conda_exe}", "env", "update", "-n", "base" "-f", environment_file_path],
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path],
             "environment_file_update.log",
         )
 
@@ -287,34 +297,15 @@ def install_from_url(
     prefix = Path(prefix)
     condameta = prefix / "conda-meta"
     condameta.mkdir(parents=True, exist_ok=True)
-    pymaj, pymin = sys.version_info[:2]
 
     with open(condameta / "pinned", "a") as f:
-        f.write(f"python {pymaj}.{pymin}.*\n")
-        f.write(f"python_abi {pymaj}.{pymin}.* *cp{pymaj}{pymin}*\n")
         f.write(f"cudatoolkit {cuda_version}.*\n")
 
     with open(prefix / ".condarc", "a") as f:
         f.write("always_yes: true\n")
 
-    with open("/etc/ipython/ipython_config.py", "a") as f:
-        f.write(
-            f"""\nc.InteractiveShellApp.exec_lines = [
-                    "import sys",
-                    "sp = f'{prefix}/lib/python{pymaj}.{pymin}/site-packages'",
-                    "if sp not in sys.path:",
-                    "    sys.path.insert(0, sp)",
-                ]
-            """
-        )
-    sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
-    if sitepackages not in sys.path:
-        sys.path.insert(0, sitepackages)
-
     env = env or {}
     bin_path = f"{prefix}/bin"
-
-
 
     os.rename(sys.executable, f"{sys.executable}.renamed_by_condacolab.bak")
     with open(sys.executable, "w") as f:
@@ -356,10 +347,10 @@ def install_mambaforge(
     restart_kernel: bool = True,
     specs: Iterable[str] = None,
     python_version: str = None,
-    channels: Iterable[str] = None, # conda install set these channels.
-    environment_file_url: str = None, # conda env update -f <path>
+    channels: Iterable[str] = None,
+    environment_file_url: str = None,
     extra_conda_args: Iterable[str] = None, 
-    pip_args: Iterable[str] = None, # -r requirements, matplotlib ...
+    pip_args: Iterable[str] = None,
 
 ):
     """
@@ -504,10 +495,6 @@ def check(prefix: os.PathLike = PREFIX, verbose: bool = True):
         Print success message if True
     """
     assert find_executable("conda"), "💥💔💥 Conda not found!"
-
-    pymaj, pymin = sys.version_info[:2]
-    sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
-    assert sitepackages in sys.path, f"💥💔💥 PYTHONPATH was not patched! Value: {sys.path}"
     assert all(
         not path.startswith("/usr/local/") for path in sys.path
     ), f"💥💔💥 PYTHONPATH include system locations: {[path for path in sys.path if path.startswith('/usr/local')]}!"

@@ -238,9 +238,10 @@ def install_from_url(
                         data["dependencies"].append(data["dependencies"].pop(data["dependencies"].index(pip_args_list))) 
                         pip_args_list["pip"] += pip_args
                         break
-                else :
-                    pip_args_dict = {'pip': [*pip_args]}
-                    data["dependencies"].append(pip_args_dict)
+                    else :
+                        pip_args_dict = {'pip': [*pip_args]}
+                        data["dependencies"].append(pip_args_dict)
+                        break
 
 
         with open(environment_file_path, 'w') as f:

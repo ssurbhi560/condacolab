@@ -200,52 +200,54 @@ def install_from_url(
                 # and so on.
         # save the file.
         # use that file to update conda base env.
-
+        environment_file_path = '/content/environment.yaml'
         print("Saving the environment.yaml file locally.")
         try:
-            with urlopen(environment_file_url) as response, open("/content/environment.yaml", "wb") as out:
+            with urlopen(environment_file_url) as response, open(environment_file_path, "wb") as out:
                 shutil.copyfileobj(response, out)
         except HTTPError:
             raise HTTPError("The URL you entered is not working, please check it again.")
         print("Saved locally!")
 
-        with open('/content/environment.yaml', 'w+') as f:
+        with open(environment_file_path, 'r') as f:
+
             try:
                 # Converts yaml document to python object
                 data = yaml.load(f, Loader=SafeLoader) # python dictionary  
             except yaml.YAMLError as e:
                 print(e)
 
-            print("Updating the environment.yaml file with new requirements you provided.")
+        print("Updating the environment.yaml file with new requirements you provided.")
 
-            for key in data.keys():
-                if channels and key == "channels":
-                    data["channels"] += channels
+        for key in data.keys():
+            if channels and key == "channels":
+                data["channels"] += channels
 
-                if specs or python_version and key == "dependencies":
-                    specs_list = data["dependencies"]
-                    specs_list += specs
-                    specs_list += [f"python={python_version}"]
-                if pip_args:
-                    for pip_args_list in specs_list:
-                        if type(pip_args_list) == dict and "pip" in pip_args_list.keys():
+            if specs or python_version and key == "dependencies":
+                specs_list = data["dependencies"]
+                specs_list += specs
+                specs_list += [f"python={python_version}"]
+            if pip_args:
+                for pip_args_list in specs_list:
+                    if type(pip_args_list) == dict and "pip" in pip_args_list.keys():
 
-                            # move the dictionary with pip requirements at the end of the list. 
+                        # move the dictionary with pip requirements at the end of the list. 
 
-                            specs_list.append(specs_list.pop(specs_list.index(pip_args_list))) 
-                            pip_args_list["pip"] += pip_args
-                            break
-                        else :
-                            pip_args_dict = {'pip': [*pip_args]}
-                            specs_list.append(pip_args_dict)
+                        specs_list.append(specs_list.pop(specs_list.index(pip_args_list))) 
+                        pip_args_list["pip"] += pip_args
+                        break
+                    else :
+                        pip_args_dict = {'pip': [*pip_args]}
+                        specs_list.append(pip_args_dict)
+
+
+        with open(environment_file_path, 'w') as f:
             f.truncate(0)
             yaml.dump(data, f, Dumper=YamlDumper, sort_keys=False, default_flow_style=False)
 
         print("Patched the enviornment.yaml file.")
 
         # make this into a separate function??? 
-
-        environment_file_path = '/content/environment.yaml'
 
         print("📦 Updating environment using environment.yaml file...")
         _run_subprocess(

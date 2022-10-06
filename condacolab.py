@@ -229,19 +229,19 @@ def install_from_url(
                     data["dependencies"] += specs
                 if python_version:
                     data["dependencies"] += [f"python={python_version}"]
-            if pip_args:
-                for pip_args_list in data["dependencies"]:
-                    if type(pip_args_list) == dict and "pip" in pip_args_list.keys():
+                if pip_args:
+                    for element in data["dependencies"]:
+                        if type(element) == dict and "pip" in element.keys():
 
                         # move the dictionary with pip requirements at the end of the list. 
 
-                        data["dependencies"].append(data["dependencies"].pop(data["dependencies"].index(pip_args_list))) 
-                        pip_args_list["pip"] += pip_args
-                        break
-                    else :
-                        pip_args_dict = {'pip': [*pip_args]}
-                        data["dependencies"].append(pip_args_dict)
-                        break
+                            data["dependencies"].append(data["dependencies"].pop(data["dependencies"].index(element))) 
+                            element["pip"] += pip_args
+                            break
+                        else :
+                            pip_args_dict = {'pip': [*pip_args]}
+                            data["dependencies"].append(pip_args_dict)
+                            break
 
 
         with open(environment_file_path, 'w') as f:

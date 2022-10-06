@@ -197,7 +197,7 @@ def install_from_url(
         except HTTPError:
             raise HTTPError("The URL you entered is not working, please check it again.")
 
-        with open("content/environment.yaml", 'wb') as f:
+        with open("/content/environment.yaml", 'wb') as f:
                 f.write(r.content) 
 
 

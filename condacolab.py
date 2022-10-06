@@ -203,6 +203,7 @@ def install_from_url(
         environment_file_path = '/content/environment.yaml'
         print("Saving the environment.yaml file locally.")
         try:
+            # we are assuming that it will always be a URL in this case.
             with urlopen(environment_file_url) as response, open(environment_file_path, "wb") as out:
                 shutil.copyfileobj(response, out)
         except HTTPError:
@@ -223,10 +224,12 @@ def install_from_url(
             if channels and key == "channels":
                 data["channels"] += channels
 
-            if specs or python_version and key == "dependencies":
+            if key == "dependencies":
                 specs_list = data["dependencies"]
-                specs_list += specs
-                specs_list += [f"python={python_version}"]
+                if specs:
+                    specs_list += specs
+                if python_version:
+                    specs_list += [f"python={python_version}"]
             if pip_args:
                 for pip_args_list in specs_list:
                     if type(pip_args_list) == dict and "pip" in pip_args_list.keys():
@@ -236,9 +239,9 @@ def install_from_url(
                         specs_list.append(specs_list.pop(specs_list.index(pip_args_list))) 
                         pip_args_list["pip"] += pip_args
                         break
-                    else :
-                        pip_args_dict = {'pip': [*pip_args]}
-                        specs_list.append(pip_args_dict)
+                else :
+                    pip_args_dict = {'pip': [*pip_args]}
+                    specs_list.append(pip_args_dict)
 
 
         with open(environment_file_path, 'w') as f:

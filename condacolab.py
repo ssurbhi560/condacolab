@@ -327,9 +327,7 @@ def install_from_url(
                 conda activate
                 unset PYTHONPATH
                 mv /usr/bin/lsb_release /usr/bin/lsb_release.renamed_by_condacolab.bak
-                if [ -f {environment_file_path} ]; then
-                    conda env upadte -f {environment_file_path}
-                fi
+                conda env upadte -f {environment_file_path}
                 exec {bin_path}/python $@
                 """
             ).lstrip()

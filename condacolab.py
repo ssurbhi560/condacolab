@@ -180,19 +180,25 @@ def install_from_url(
 
     if environment_file_url and not(specs or channels or pip_args or python_version): 
         print("📦 Updating environment using environment.yaml file...")
-        if extra_conda_args:
-            _run_subprocess(
-                [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url, *extra_conda_args],
-                "environment_file_update.log",
-            )
-        else: 
-            _run_subprocess(
-                [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
-                "environment_file_update.log",
-            )
-            
-
-        print("Environment update done.")
+        # if extra_conda_args:
+        #     _run_subprocess(
+        #         [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url, *extra_conda_args],
+        #         "environment_file_update.log",
+        #     )
+        # else: 
+        #     _run_subprocess(
+        #         [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
+        #         "environment_file_update.log",
+        #     )
+        environment_file_path = '/content/environment.yaml'
+        print("Saving the environment.yaml file locally.")
+        try:
+            # we are assuming that it will always be a URL in this case.
+            with urlopen(environment_file_url) as response, open(environment_file_path, "wb") as out:
+                shutil.copyfileobj(response, out)
+        except HTTPError:
+            raise HTTPError("The URL you entered is not working, please check it again.")
+        print("Saved locally!")
     
     # if environment.yaml file is given and some of other option are given as well.
 
@@ -316,8 +322,11 @@ def install_from_url(
                 source {prefix}/etc/profile.d/conda.sh
                 conda activate
                 unset PYTHONPATH
-                
                 mv /usr/bin/lsb_release /usr/bin/lsb_release.renamed_by_condacolab.bak
+                if [ -f /content/environment.yaml ]; then
+                    conda env upadte -f /content/environment.yaml
+                fi
+                conda env upadte -f /content/environment.yaml
                 exec {bin_path}/python $@
                 """
             ).lstrip()

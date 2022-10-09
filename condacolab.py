@@ -179,7 +179,7 @@ def install_from_url(
     #if only environment.yaml file is provided and nothing else is given.
 
     if environment_file_url and not(specs or channels or pip_args or python_version): 
-        print("📦 Updating environment using environment.yaml file...")
+        # print("📦 Updating environment using environment.yaml file...")
         # if extra_conda_args:
         #     _run_subprocess(
         #         [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url, *extra_conda_args],
@@ -190,6 +190,8 @@ def install_from_url(
         #         [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
         #         "environment_file_update.log",
         #     )
+            
+
         environment_file_path = '/content/environment.yaml'
         print("Saving the environment.yaml file locally.")
         try:
@@ -199,6 +201,8 @@ def install_from_url(
         except HTTPError:
             raise HTTPError("The URL you entered is not working, please check it again.")
         print("Saved locally!")
+
+        print("Environment update done.")
     
     # if environment.yaml file is given and some of other option are given as well.
 
@@ -323,10 +327,9 @@ def install_from_url(
                 conda activate
                 unset PYTHONPATH
                 mv /usr/bin/lsb_release /usr/bin/lsb_release.renamed_by_condacolab.bak
-                if [ -f /content/environment.yaml ]; then
-                    conda env upadte -f /content/environment.yaml
+                if [ -f {environment_file_path} ]; then
+                    conda env upadte -f {environment_file_path}
                 fi
-                conda env upadte -f /content/environment.yaml
                 exec {bin_path}/python $@
                 """
             ).lstrip()

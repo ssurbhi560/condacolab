@@ -79,9 +79,9 @@ def _run_subprocess(command, logs_filename):
             text=True,
         )
 
-    with open(f"/content/{logs_filename}", "w") as f:
+    with open(f"/var/condacolab/{logs_filename}", "w") as f:
         f.write(task.stdout)
-    assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `/content/{logs_filename}`."
+    assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `/var/condacolab/{logs_filename}`."
 
 
 def install_from_url(
@@ -131,6 +131,36 @@ def install_from_url(
     with urlopen(installer_url) as response, open(installer_fn, "wb") as out:
         shutil.copyfileobj(response, out)
 
+
+    print("📌 Adjusting configuration...")
+    cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])
+    prefix = Path(prefix)
+    condameta = prefix / "conda-meta"
+    condameta.mkdir(parents=True, exist_ok=True)
+    pymaj, pymin = sys.version_info[:2]
+
+    with open(condameta / "pinned", "a") as f:
+        f.write(f"python {pymaj}.{pymin}.*\n")
+        f.write(f"python_abi {pymaj}.{pymin}.* *cp{pymaj}{pymin}*\n")
+        f.write(f"cudatoolkit {cuda_version}.*\n")
+
+    with open(prefix / ".condarc", "a") as f:
+        f.write("always_yes: true\n")
+
+    with open("/etc/ipython/ipython_config.py", "a") as f:
+        f.write(
+            f"""\nc.InteractiveShellApp.exec_lines = [
+                    "import sys",
+                    "sp = f'{prefix}/lib/python{pymaj}.{pymin}/site-packages'",
+                    "if sp not in sys.path:",
+                    "    sys.path.insert(0, sp)",
+                ]
+            """
+        )
+    sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
+    if sitepackages not in sys.path:
+        sys.path.insert(0, sitepackages)
+
     print("📦 Installing...")
 
     condacolab_task = _run_subprocess(
@@ -166,35 +196,6 @@ def install_from_url(
         [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", "condacolab"],
         "pip_task.log"
         )
-
-    print("📌 Adjusting configuration...")
-    cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])
-    prefix = Path(prefix)
-    condameta = prefix / "conda-meta"
-    condameta.mkdir(parents=True, exist_ok=True)
-    pymaj, pymin = sys.version_info[:2]
-
-    with open(condameta / "pinned", "a") as f:
-        f.write(f"python {pymaj}.{pymin}.*\n")
-        f.write(f"python_abi {pymaj}.{pymin}.* *cp{pymaj}{pymin}*\n")
-        f.write(f"cudatoolkit {cuda_version}.*\n")
-
-    with open(prefix / ".condarc", "a") as f:
-        f.write("always_yes: true\n")
-
-    with open("/etc/ipython/ipython_config.py", "a") as f:
-        f.write(
-            f"""\nc.InteractiveShellApp.exec_lines = [
-                    "import sys",
-                    "sp = f'{prefix}/lib/python{pymaj}.{pymin}/site-packages'",
-                    "if sp not in sys.path:",
-                    "    sys.path.insert(0, sp)",
-                ]
-            """
-        )
-    sitepackages = f"{prefix}/lib/python{pymaj}.{pymin}/site-packages"
-    if sitepackages not in sys.path:
-        sys.path.insert(0, sitepackages)
 
     env = env or {}
     bin_path = f"{prefix}/bin"

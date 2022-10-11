@@ -79,9 +79,9 @@ def _run_subprocess(command, logs_filename):
             text=True,
         )
 
-    with open(f"/var/condacolab/{logs_filename}", "w") as f:
+    with open(f"/var/colab/{logs_filename}", "w") as f:
         f.write(task.stdout)
-    assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `/var/condacolab/{logs_filename}`."
+    assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `/var/colab/{logs_filename}`."
 
 
 def install_from_url(

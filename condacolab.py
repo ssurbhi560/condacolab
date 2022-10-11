@@ -12,6 +12,7 @@ For more details, check the docstrings for ``install_from_url()``.
 
 import json
 import os
+from os import path
 import sys
 import shutil
 from datetime import datetime, timedelta
@@ -79,9 +80,13 @@ def _run_subprocess(command, logs_filename):
             text=True,
         )
 
-    with open(f"/var/colab/{logs_filename}", "w") as f:
+    condacolab_logs_path = "/var/condacolab"
+    if not os.path.exists(condacolab_logs_path):
+        os.mkdir(condacolab_logs_path)
+
+    with open(f"{condacolab_logs_path}/{logs_filename}", "w") as f:
         f.write(task.stdout)
-    assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `/var/colab/{logs_filename}`."
+    assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `{condacolab_logs_path}/{logs_filename}`."
 
 
 def install_from_url(

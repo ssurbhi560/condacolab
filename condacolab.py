@@ -22,6 +22,7 @@ from distutils.spawn import find_executable
 from IPython.display import display
 
 from IPython import get_ipython
+
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
@@ -120,6 +121,7 @@ def _update_with_environment_file(
                         break
     with open(environment_file_path, 'w') as f:
         f.truncate(0)
+        yaml.indent(mapping=2, sequence=4, offset=2)
         yaml.dump(env_details, f)
 
     if extra_conda_args:

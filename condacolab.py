@@ -11,8 +11,6 @@ import json
 import os
 import sys
 import shutil
-import yaml
-from yaml.loader import SafeLoader
 from datetime import datetime, timedelta
 from pathlib import Path
 from subprocess import check_output, run, PIPE, STDOUT
@@ -24,6 +22,9 @@ from distutils.spawn import find_executable
 from IPython.display import display
 
 from IPython import get_ipython
+
+from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap
 
 try:
     import ipywidgets as widgets
@@ -45,12 +46,7 @@ __author__ = (
 
 PREFIX = "/opt/conda"
 
-
-# helper class for adding indentation while creating enviornment.yaml files.
-class YamlDumper(yaml.Dumper):
-
-    def increase_indent(self, flow=False, indentless=False):
-        return super(YamlDumper, self).increase_indent(flow, False)
+yaml=YAML()
 
 if HAS_IPYWIDGETS:
     restart_kernel_button = widgets.Button(description="Restart kernel now...")
@@ -87,6 +83,106 @@ def _run_subprocess(command, logs_filename):
     assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `/content/{logs_filename}`."
 
 
+def _update_with_environment_file(
+    prefix:os.PathLike = PREFIX,
+    environment_file: str = None,
+    python_version: str = None,
+    specs: Iterable[str] = None,
+    channels: Iterable[str] = None,
+    pip_args: Iterable[str] = None,
+    extra_conda_args: Iterable[str] = None,
+):  
+    # if URL is given for environment.yaml file
+    if environment_file.startswith("http"):
+        environment_file_path = "/content/environment.yaml"
+        try:
+            with urlopen(environment_file) as response, open(environment_file_path, "wb") as out:
+                shutil.copyfileobj(response, out)
+        except HTTPError as e:
+            raise HTTPError("The URL you entered is not working, please check it again.") from e
+    # Path is given for environment.yaml file
+    else:
+        environment_file_path = environment_file
+
+    with open(environment_file_path, 'r') as f:
+        env_details = yaml.load(f.read())
+        # env_details is a dictionary (CommentedMap)
+        # env_details = {"channels" : ["conda-forge", "bioconda"], "dependencies": ["flask", "flask-sqlalchemy", {"pip" : ["pyyaml"]}]}
+        for key in env_details:
+            if channels and key == "channels":
+                env_details["channels"] += channels
+            if key == "dependencies":
+                if specs:
+                    env_details["dependencies"] += specs
+                if python_version:
+                    env_details["dependencies"] += [f"python={python_version}"]
+                if pip_args:
+                    for element in env_details["dependencies"]:
+                        # if pip dependencies are already specified and we are adding more.
+                        if type(element) is CommentedMap and "pip" in element:
+                            element["pip"] += pip_args
+                        # if no dependencies are specified in the yaml file.
+                        else : 
+                            pip_args_dict = CommentedMap([("pip", [*pip_args])])
+                            env_details["dependencies"].append(pip_args_dict)
+                        break
+    with open(environment_file_path, 'w') as f:
+        f.truncate(0)
+        yaml.indent(mapping=2, sequence=4, offset=2)
+        yaml.dump(env_details, f)
+
+    if extra_conda_args:
+        _run_subprocess(
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path, *extra_conda_args],
+            "environment_file_update.log",
+        )
+    else: 
+        _run_subprocess(
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path],
+            "environment_file_update.log",
+        )
+
+
+def _update_without_environment_file(
+    prefix:os.PathLike = PREFIX,
+    python_version: str = None,
+    specs: Iterable[str] = None,
+    channels: Iterable[str] = None,
+    pip_args: Iterable[str] = None,
+    extra_conda_args: Iterable[str] = None,
+):
+    env_details = {}
+
+    if channels: 
+        env_details["channels"] = channels
+
+    if specs:
+        env_details["dependencies"] = specs
+
+    if python_version:
+        env_details["dependencies"] += [f"python={python_version}"]
+
+    if pip_args:
+        pip_args_dict = {"pip": pip_args}
+        env_details["dependencies"].append(pip_args_dict) 
+
+    environment_file_path = "/content/environment.yaml"
+
+    with open(environment_file_path, 'w') as f:
+        yaml.indent(mapping=2, sequence=4, offset=2)
+        yaml.dump(env_details, f)
+
+    if extra_conda_args:
+        _run_subprocess(
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path, *extra_conda_args],
+            "environment_file_update.log",
+        )
+    else: 
+        _run_subprocess(
+            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path],
+            "environment_file_update.log",
+        )
+
 def install_from_url(
     installer_url: AnyStr,
     prefix:os.PathLike = PREFIX,
@@ -96,7 +192,7 @@ def install_from_url(
     python_version: str = None,
     specs: Iterable[str] = None,
     channels: Iterable[str] = None,
-    environment_file_url: str = None,
+    environment_file: str = None,
     extra_conda_args: Iterable[str] = None, 
     pip_args: Iterable[str] = None,
 
@@ -138,13 +234,24 @@ def install_from_url(
     with urlopen(installer_url) as response, open(installer_fn, "wb") as out:
         shutil.copyfileobj(response, out)
 
+    print("📌 Adjusting configuration...")
+    cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])
+    prefix = Path(prefix)
+    condameta = prefix / "conda-meta"
+    condameta.mkdir(parents=True, exist_ok=True)
+
+    with open(condameta / "pinned", "a") as f:
+        f.write(f"cudatoolkit {cuda_version}.*\n")
+
+    with open(prefix / ".condarc", "a") as f:
+        f.write("always_yes: true\n")
+
     print("📦 Installing...")
 
     condacolab_task = _run_subprocess(
         ["bash", installer_fn, "-bfp", str(prefix)],
         "condacolab_install.log",
         )
-
 # Installing the following packages because Colab server expects these packages to be installed in order to launch a Python kernel:
 #     - matplotlib-base
 #     - psutil
@@ -157,7 +264,7 @@ def install_from_url(
 
     output = check_output([f"{prefix}/bin/conda", "list", "--json"])
     payload = json.loads(output)
-    installed_names = [pkg["name"] for pkg in payload] 
+    installed_names = [pkg["name"] for pkg in payload]
     required_packages = ["matplotlib-base", "psutil", "google-colab"]
     for pkg in required_packages.copy():
         if pkg in installed_names:
@@ -178,131 +285,44 @@ def install_from_url(
 
     #if only environment.yaml file is provided and nothing else is given.
 
-    if environment_file_url and not(specs or channels or pip_args or python_version): 
+    if environment_file and not specs and not channels and not pip_args and not python_version:
+
         print("📦 Updating environment using environment.yaml file...")
+
         if extra_conda_args:
             _run_subprocess(
-                [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url, *extra_conda_args],
+                [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file, *extra_conda_args],
                 "environment_file_update.log",
             )
         else: 
             _run_subprocess(
-                [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_url],
+                [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file],
                 "environment_file_update.log",
             )
-            
-
         print("Environment update done.")
-    
+
     # if environment.yaml file is given and some of other option are given as well.
 
-    elif environment_file_url and (specs or channels or python_version or pip_args):
+    elif environment_file and (specs or channels or python_version or pip_args):
 
-        # Load the data from the file using the URL and create a file locally.
-        # Change the yaml file to a python dictionary.
-        # In that dictionary - add the packages specified by the user during installation something like this: 
-            # if python_version: 
-                #env_details["dependencies"] += [f"python={python_version}"]
-                # and so on.
-        # save the file.
-        # use that file to update conda base env.
-        environment_file_path = '/content/environment.yaml'
-        print("Saving the environment.yaml file locally.")
-        try:
-            # we are assuming that it will always be a URL in this case.
-            with urlopen(environment_file_url) as response, open(environment_file_path, "wb") as out:
-                shutil.copyfileobj(response, out)
-        except HTTPError:
-            raise HTTPError("The URL you entered is not working, please check it again.")
-        print("Saved locally!")
-
-        with open(environment_file_path, 'r') as f:
-
-            try:
-                # Converts yaml document to python object
-                data = yaml.load(f, Loader=SafeLoader) # python dictionary  
-            except yaml.YAMLError as e:
-                print(e)
-
-        print("Updating the environment.yaml file with new requirements you provided.")
-
-        for key in data.keys():
-            if channels and key == "channels":
-                data["channels"] += channels
-
-            if key == "dependencies":
-                if specs:
-                    data["dependencies"] += specs
-                if python_version:
-                    data["dependencies"] += [f"python={python_version}"]
-                if pip_args:
-                    for element in data["dependencies"]:
-                        if type(element) == dict and "pip" in element.keys():
-
-                        # move the dictionary with pip requirements at the end of the list. 
-
-                            data["dependencies"].append(data["dependencies"].pop(data["dependencies"].index(element))) 
-                            element["pip"] += pip_args
-                            break
-                        else :
-                            pip_args_dict = {'pip': [*pip_args]}
-                            data["dependencies"].append(pip_args_dict)
-                            break
-
-        with open(environment_file_path, 'w') as f:
-            f.truncate(0)
-            yaml.dump(data, f, Dumper=YamlDumper, sort_keys=False, default_flow_style=False)
-
-        print("Patched the enviornment.yaml file.")
-
-        # make this into a separate function??? 
-
-        print("📦 Updating environment using environment.yaml file...")
-        _run_subprocess(
-            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path],
-            "environment_file_update.log",
-        )
-
-        print("Environment update done.")
-    
-    # if envioronment.yaml is not given but some or all other options are given.
+        _update_with_environment_file(
+            prefix=prefix,
+            environment_file=environment_file, 
+            python_version=python_version, 
+            specs=specs, 
+            pip_args=pip_args,
+            channels=channels,
+            extra_conda_args=extra_conda_args,
+            )
     else:
-        
-        env_details = {}
-
-        if channels: 
-            env_details["channels"] = channels
-
-        if specs:
-            env_details["dependencies"] = specs
-
-        if python_version:
-            env_details["dependencies"] += [f"python={python_version}"]
-
-        if pip_args:
-            pip_args_dict = {"pip": pip_args}
-            env_details["dependencies"].append(pip_args_dict) 
-
-        environment_file_path = "/content/environment.yaml"
-        with open(environment_file_path, 'w') as f:
-            yaml.dump(env_details, f, Dumper=YamlDumper, sort_keys=False, default_flow_style=False)
-
-        _run_subprocess(
-            [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path],
-            "environment_file_update.log",
-        )
-
-    print("📌 Adjusting configuration...")
-    cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])
-    prefix = Path(prefix)
-    condameta = prefix / "conda-meta"
-    condameta.mkdir(parents=True, exist_ok=True)
-
-    with open(condameta / "pinned", "a") as f:
-        f.write(f"cudatoolkit {cuda_version}.*\n")
-
-    with open(prefix / ".condarc", "a") as f:
-        f.write("always_yes: true\n")
+        _update_without_environment_file(
+            prefix=prefix, 
+            specs=specs, 
+            channels=channels, 
+            python_version=python_version, 
+            pip_args=pip_args, 
+            extra_conda_args=extra_conda_args
+            )
 
     env = env or {}
     bin_path = f"{prefix}/bin"
@@ -348,7 +368,7 @@ def install_mambaforge(
     specs: Iterable[str] = None,
     python_version: str = None,
     channels: Iterable[str] = None,
-    environment_file_url: str = None,
+    environment_file: str = None,
     extra_conda_args: Iterable[str] = None, 
     pip_args: Iterable[str] = None,
 
@@ -387,7 +407,7 @@ def install_mambaforge(
         specs=specs, 
         python_version=python_version,
         channels=channels,
-        environment_file_url=environment_file_url,
+        environment_file=environment_file,
         extra_conda_args=extra_conda_args,
         pip_args=pip_args,
         )

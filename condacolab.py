@@ -93,7 +93,7 @@ def _update_with_environment_file(
     extra_conda_args: Iterable[str] = None,
 ):  
     # if URL is given for environment.yaml file
-    if environment_file.startswith("http"):
+    if environment_file.startswith("http://", "https://"):
         environment_file_path = "/content/environment.yaml"
         try:
             with urlopen(environment_file) as response, open(environment_file_path, "wb") as out:

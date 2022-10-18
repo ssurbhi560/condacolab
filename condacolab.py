@@ -148,12 +148,24 @@ def _update_environment(
                 if pip_args:
                     for element in env_details["dependencies"]:
                         # if pip dependencies are already specified and we are adding more.
-                        if type(element) is CommentedMap and "pip" in element:
+                        if type(element) == CommentedMap and "pip" in element:
+                        # move the dictionary with pip requirements at the end of the list. 
+                            env_details["dependencies"].append(env_details["dependencies"].pop(env_details["dependencies"].index(element))) 
+
                             element["pip"].extend(pip_args)
-                        # if no dependencies are specified in the yaml file.
-                        else : 
+                            # if no dependencies are specified in the yaml file.
+                        else :
                             pip_args_dict = CommentedMap([("pip", [*pip_args])])
-                            env_details["dependencies"].extend(pip_args_dict)
+                            env_details["dependencies"].append(pip_args_dict)
+                # if pip_args:
+                #     for element in env_details["dependencies"]:
+                #         # if pip dependencies are already specified and we are adding more.
+                #         if type(element) is CommentedMap and "pip" in element:
+                #             element["pip"].extend(pip_args)
+                #         # if no dependencies are specified in the yaml file.
+                #         else : 
+                #             pip_args_dict = CommentedMap([("pip", [*pip_args])])
+                #             env_details["dependencies"].extend(pip_args_dict)
                         break
         with open(environment_file_path, 'w') as f:
             f.truncate(0)

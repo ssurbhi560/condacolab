@@ -121,7 +121,7 @@ def _update_environment(
 
     else: 
         # if URL is given for environment.yaml file
-        if environment_file.startswith("http://", "https://"):
+        if environment_file.startswith(("http://", "https://")):
             environment_file_path = "/environment.yaml"
             try:
                 with urlopen(environment_file) as response, open(environment_file_path, "wb") as out:

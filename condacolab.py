@@ -228,10 +228,13 @@ def install_from_url(
         shutil.copyfileobj(response, out)
 
     print("📌 Adjusting configuration...")
+    cuda_version = ".".join(os.environ.get("CUDA_VERSION", "*.*.*").split(".")[:2])
     prefix = Path(prefix)
     condameta = prefix / "conda-meta"
     condameta.mkdir(parents=True, exist_ok=True)
 
+    with open(condameta / "pinned", "a") as f:
+        f.write(f"cudatoolkit {cuda_version}.*\n")
 
     with open(prefix / ".condarc", "a") as f:
         f.write("always_yes: true\n")

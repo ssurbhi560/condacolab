@@ -139,7 +139,7 @@ def _update_environment(
         # env_details = {"channels" : ["conda-forge", "bioconda"], "dependencies": ["flask", "flask-sqlalchemy", {"pip" : ["pyyaml"]}]}
         for key in env_details:
             if channels and key == "channels":
-                env_details["channels"] += channels
+                env_details["channels"].append(channels)
             if key == "dependencies":
                 if specs:
                     env_details["dependencies"].append(specs)

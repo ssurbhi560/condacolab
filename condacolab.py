@@ -139,21 +139,21 @@ def _update_environment(
         # env_details = {"channels" : ["conda-forge", "bioconda"], "dependencies": ["flask", "flask-sqlalchemy", {"pip" : ["pyyaml"]}]}
         for key in env_details:
             if channels and key == "channels":
-                env_details["channels"].append(channels)
+                env_details["channels"].extend(channels)
             if key == "dependencies":
                 if specs:
-                    env_details["dependencies"].append(specs)
+                    env_details["dependencies"].extend(specs)
                 if python_version:
-                    env_details["dependencies"].append([f"python={python_version}"])
+                    env_details["dependencies"].extend([f"python={python_version}"])
                 if pip_args:
                     for element in env_details["dependencies"]:
                         # if pip dependencies are already specified and we are adding more.
                         if type(element) is CommentedMap and "pip" in element:
-                            element["pip"].append(pip_args)
+                            element["pip"].extend(pip_args)
                         # if no dependencies are specified in the yaml file.
                         else : 
                             pip_args_dict = CommentedMap([("pip", [*pip_args])])
-                            env_details["dependencies"].append(pip_args_dict)
+                            env_details["dependencies"].extend(pip_args_dict)
                         break
         with open(environment_file_path, 'w') as f:
             f.truncate(0)

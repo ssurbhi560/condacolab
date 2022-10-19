@@ -27,7 +27,7 @@ try:
     from ruamel.yaml import YAML
     from ruamel.yaml.comments import CommentedMap
 except ImportError as e:
-    raise RuntimeError("This module must ONLY run as part of a Colab notebook!") from e
+    raise RuntimeError("Could not find ruamel.yaml, plese install using `!pip install ruamel.yaml`!") from e
 
 try:
     import ipywidgets as widgets
@@ -96,7 +96,30 @@ def _update_environment(
     pip_args: Iterable[str] = None,
     extra_conda_args: Iterable[str] = None,
 ):
+    """
+    Install the dependencies in conda base environment during
+    the condacolab installion.
+    Parameters
+    ----------
+    prefix
+        Target location for the installation.
+    environment_file
+        Path or URL of the environment.yaml file to use for
+        updating the conda base enviornment. 
+    python_version
+        Python version to use in the conda base environment, eg. "3.9".
+    specs
+        List of additional specifications (packages) to install.
+    channels
+        Comma separated list of channels to use in the conda 
+        base environment.
+    pip_args
+        List of additional packages to be installed using pip.
+    extra_conda_args
+        Any extra conda arguments to be used during the installation.
+    """
 
+    # When environment.yaml file is not provided.
     if environment_file is None:
 
         env_details = {}
@@ -121,7 +144,7 @@ def _update_environment(
             yaml.dump(env_details, f)
 
     else: 
-        # if URL is given for environment.yaml file
+        # If URL is given for environment.yaml file
         if environment_file.startswith(("http://", "https://")):
             environment_file_path = "/environment.yaml"
             try:
@@ -129,15 +152,14 @@ def _update_environment(
                     shutil.copyfileobj(response, out)
             except HTTPError as e:
                 raise HTTPError("The URL you entered is not working, please check it again.") from e
-        # Path is given for environment.yaml file
+
+        # If path is given for environment.yaml file
         else:
             environment_file_path = environment_file
 
         with open(environment_file_path, 'r') as f:
             env_details = yaml.load(f.read())
 
-        # env_details is a dictionary (CommentedMap)
-        # env_details = {"channels" : ["conda-forge", "bioconda"], "dependencies": ["flask", "flask-sqlalchemy", {"pip" : ["pyyaml"]}]}
         for key in env_details:
             if channels and key == "channels":
                 env_details["channels"].extend(channels)
@@ -148,10 +170,10 @@ def _update_environment(
                     env_details["dependencies"].extend([f"python={python_version}"])
                 if pip_args:
                     for element in env_details["dependencies"]:
-                        # if pip dependencies are already specified and we are adding more.
+                        # if pip dependencies are already specified.
                         if type(element) is CommentedMap and "pip" in element:
                             element["pip"].extend(pip_args)
-                        # if no dependencies are specified in the yaml file.
+                        # if there are no pip dependencies specified in the yaml file.
                         else : 
                             pip_args_dict = CommentedMap([("pip", [*pip_args])])
                             env_details["dependencies"].append(pip_args_dict)
@@ -266,35 +288,29 @@ def install_from_url(
         "pip_task.log"
         )
 
-
-    #if only environment.yaml file is provided and nothing else is given.
-
     if environment_file and not specs and not channels and not pip_args and not python_version:
-
-        print("📦 Updating environment using environment.yaml file...")
         extra_conda_args = extra_conda_args or ()
+
         _run_subprocess(
             [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file],
             "environment_file_update.log",
         )
         print("Environment update done.")
 
-    # if environment.yaml file is given and some of other option are given as well.
-
-    elif environment_file and (specs or channels or python_version or pip_args):
-
-        _update_environment(
-            prefix=prefix,
-            environment_file=environment_file, 
-            python_version=python_version, 
-            specs=specs, 
-            pip_args=pip_args,
-            channels=channels,
-            extra_conda_args=extra_conda_args,
-            )
+    # elif environment_file and (specs or channels or python_version or pip_args):
+    #     _update_environment(
+    #         prefix=prefix,
+    #         environment_file=environment_file, 
+    #         python_version=python_version, 
+    #         specs=specs, 
+    #         pip_args=pip_args,
+    #         channels=channels,
+    #         extra_conda_args=extra_conda_args,
+    #         )
     else:
         _update_environment(
             prefix=prefix,
+            environment_file=environment_file,
             specs=specs, 
             channels=channels, 
             python_version=python_version, 

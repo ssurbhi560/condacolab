@@ -148,25 +148,13 @@ def _update_environment(
                 if pip_args:
                     for element in env_details["dependencies"]:
                         # if pip dependencies are already specified and we are adding more.
-                        if type(element) == CommentedMap and "pip" in element:
-                        # move the dictionary with pip requirements at the end of the list. 
-                            env_details["dependencies"].append(env_details["dependencies"].pop(env_details["dependencies"].index(element))) 
-
+                        if type(element) is CommentedMap and "pip" in element:
                             element["pip"].extend(pip_args)
-                            # if no dependencies are specified in the yaml file.
-                        else :
-                            pip_args_dict = CommentedMap([("pip", [*pip_args])])
-                            env_details["dependencies"].append(pip_args_dict)
-                # if pip_args:
-                #     for element in env_details["dependencies"]:
-                #         # if pip dependencies are already specified and we are adding more.
-                #         if type(element) is CommentedMap and "pip" in element:
-                #             element["pip"].extend(pip_args)
-                #         # if no dependencies are specified in the yaml file.
-                #         else : 
-                #             pip_args_dict = CommentedMap([("pip", [*pip_args])])
-                #             env_details["dependencies"].extend(pip_args_dict)
-                        break
+                            break
+                    # if no dependencies are specified in the yaml file.
+                    pip_args_dict = CommentedMap([("pip", [*pip_args])])
+                    env_details["dependencies"].extend(pip_args_dict)
+                    break
         with open(environment_file_path, 'w') as f:
             f.truncate(0)
             yaml.dump(env_details, f)
@@ -177,43 +165,6 @@ def _update_environment(
         [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path, *extra_conda_args],
         "environment_file_update.log",
     )
-
-
-# def _update_without_environment_file(
-#     prefix:os.PathLike = PREFIX,
-#     python_version: str = None,
-#     specs: Iterable[str] = None,
-#     channels: Iterable[str] = None,
-#     pip_args: Iterable[str] = None,
-#     extra_conda_args: Iterable[str] = None,
-# ):
-#     env_details = {}
-
-#     if channels: 
-#         env_details["channels"] = channels
-
-#     if specs:
-#         env_details["dependencies"] = specs
-
-#     if python_version:
-#         env_details["dependencies"] += [f"python={python_version}"]
-
-#     if pip_args:
-#         pip_args_dict = {"pip": pip_args}
-#         env_details["dependencies"].append(pip_args_dict) 
-
-#     environment_file_path = "/environment.yaml"
-
-#     with open(environment_file_path, 'w') as f:
-#         yaml.indent(mapping=2, sequence=4, offset=2)
-#         yaml.dump(env_details, f)
-
-#     extra_conda_args = extra_conda_args or ()
-
-#     _run_subprocess(
-#         [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path, *extra_conda_args],
-#         "environment_file_update.log",
-#     )
 
 def install_from_url(
     installer_url: AnyStr,
@@ -317,28 +268,19 @@ def install_from_url(
     #if only environment.yaml file is provided and nothing else is given.
 
     if environment_file and not specs and not channels and not pip_args and not python_version:
-
-        print("📦 Updating environment using environment.yaml file...")
         extra_conda_args = extra_conda_args or ()
+        
+        print("📦 Updating environment using environment.yaml file...")
+        
         _run_subprocess(
             [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file],
             "environment_file_update.log",
         )
         print("Environment update done.")
 
-    # if environment.yaml file is given and some of other option are given as well.
+    # if environment.yaml file is given and some of other option are given as well or, 
+    # enviroment file is not given and some/all other options are given.
 
-    elif environment_file and (specs or channels or python_version or pip_args):
-
-        _update_environment(
-            prefix=prefix,
-            environment_file=environment_file, 
-            python_version=python_version, 
-            specs=specs, 
-            pip_args=pip_args,
-            channels=channels,
-            extra_conda_args=extra_conda_args,
-            )
     else:
         _update_environment(
             prefix=prefix,

@@ -95,6 +95,8 @@ def _update_environment(
     pip_args: Iterable[str] = None,
     extra_conda_args: Iterable[str] = None,
 ):
+    print("updating environment.yaml")
+
 
     if environment_file is None:
 
@@ -151,16 +153,17 @@ def _update_environment(
                         if type(element) is CommentedMap and "pip" in element:
                             element["pip"].extend(pip_args)
                             break
-                    # if no dependencies are specified in the yaml file.
-                    pip_args_dict = CommentedMap([("pip", [*pip_args])])
-                    env_details["dependencies"].extend(pip_args_dict)
-                    break
+                        # if no dependencies are specified in the yaml file.
+                        else:
+                            pip_args_dict = CommentedMap([("pip", [*pip_args])])
+                            env_details["dependencies"].extend(pip_args_dict)
+                            break
         with open(environment_file_path, 'w') as f:
             f.truncate(0)
             yaml.dump(env_details, f)
 
     extra_conda_args = extra_conda_args or ()
-
+    print("updating env using environment.yaml")
     _run_subprocess(
         [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path, *extra_conda_args],
         "environment_file_update.log",

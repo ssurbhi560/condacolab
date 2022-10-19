@@ -86,6 +86,7 @@ def _run_subprocess(command, logs_filename):
     assert (task.returncode == 0), f"💥💔💥 The installation failed! Logs are available at `/content/{logs_filename}`."
 
 
+
 def _update_environment(
     prefix:os.PathLike = PREFIX,
     environment_file: str = None,
@@ -95,8 +96,6 @@ def _update_environment(
     pip_args: Iterable[str] = None,
     extra_conda_args: Iterable[str] = None,
 ):
-    print("updating environment.yaml")
-
 
     if environment_file is None:
 
@@ -152,7 +151,8 @@ def _update_environment(
                         # if pip dependencies are already specified and we are adding more.
                         if type(element) is CommentedMap and "pip" in element:
                             element["pip"].extend(pip_args)
-                        else:
+                        # if no dependencies are specified in the yaml file.
+                        else : 
                             pip_args_dict = CommentedMap([("pip", [*pip_args])])
                             env_details["dependencies"].append(pip_args_dict)
                         break
@@ -161,7 +161,7 @@ def _update_environment(
             yaml.dump(env_details, f)
 
     extra_conda_args = extra_conda_args or ()
-    print("updating env using environment.yaml")
+
     _run_subprocess(
         [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file_path, *extra_conda_args],
         "environment_file_update.log",
@@ -265,6 +265,7 @@ def install_from_url(
         [f"{prefix}/bin/python", "-m", "pip", "-q", "install", "-U", "https://github.com/googlecolab/colabtools/archive/refs/heads/main.zip", "https://github.com/ssurbhi560/condacolab/archive/second-working-branch.tar.gz"],
         "pip_task.log"
         )
+
 
     #if only environment.yaml file is provided and nothing else is given.
 

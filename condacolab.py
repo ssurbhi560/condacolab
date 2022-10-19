@@ -268,19 +268,28 @@ def install_from_url(
     #if only environment.yaml file is provided and nothing else is given.
 
     if environment_file and not specs and not channels and not pip_args and not python_version:
-        extra_conda_args = extra_conda_args or ()
-        
+
         print("📦 Updating environment using environment.yaml file...")
-        
+        extra_conda_args = extra_conda_args or ()
         _run_subprocess(
             [f"{prefix}/bin/python", "-m", "conda_env", "update", "-n", "base", "-f", environment_file],
             "environment_file_update.log",
         )
         print("Environment update done.")
 
-    # if environment.yaml file is given and some of other option are given as well or, 
-    # enviroment file is not given and some/all other options are given.
+    # if environment.yaml file is given and some of other option are given as well.
 
+    elif environment_file and (specs or channels or python_version or pip_args):
+
+        _update_environment(
+            prefix=prefix,
+            environment_file=environment_file, 
+            python_version=python_version, 
+            specs=specs, 
+            pip_args=pip_args,
+            channels=channels,
+            extra_conda_args=extra_conda_args,
+            )
     else:
         _update_environment(
             prefix=prefix,
